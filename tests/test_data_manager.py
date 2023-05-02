@@ -17,6 +17,7 @@ from sympy.physics.mechanics import (
     find_dynamicsymbols,
 )
 from sympy.physics.mechanics._system import System
+from sympy.physics.mechanics.models import n_link_pendulum_on_cart
 
 
 class TestDataManager:
@@ -52,30 +53,9 @@ class TestDataManager:
         elif dyn_symbols == "matrix":
             return ImmutableMatrix(list(self.dyn_symbols.keys()))
 
-    def test_init(self):
-        dm = DataManager()
-        assert dm.q == ImmutableMatrix()
-        assert dm.u == ImmutableMatrix()
-        assert dm.q_ind == ImmutableMatrix()
-        assert dm.u_ind == ImmutableMatrix()
-        assert dm.q_dep == ImmutableMatrix()
-        assert dm.u_dep == ImmutableMatrix()
-        assert dm.holonomic_constraints == ImmutableMatrix()
-        assert dm.nonholonomic_constraints == ImmutableMatrix()
-        assert dm.kdes == ImmutableMatrix()
-        assert dm.mass_matrix_full == ImmutableMatrix()
-        assert dm.forcing_full == ImmutableMatrix()
-        assert dm.mass_matrix == ImmutableMatrix()
-        assert dm.forcing == ImmutableMatrix()
-        assert dm.mass_matrix_kin == ImmutableMatrix()
-        assert dm.forcing_kin == ImmutableMatrix()
-        f = BytesIO()
-        pickle.dump(dm, f)
-
     @pytest.mark.parametrize("dyn_symbols", ["search", "dict", "matrix"])
     def test_rolling_disc_system_types(self, _setup_rolling_disc, dyn_symbols) -> None:
-        dm = DataManager()
-        dm.process_system(self.system, self._get_dyn_symbols(dyn_symbols))
+        dm = DataManager(self.system, self._get_dyn_symbols(dyn_symbols))
         attrs = ["q", "u", "q_ind", "u_ind", "q_dep", "u_dep", "holonomic_constraints",
                  "nonholonomic_constraints", "kdes", "mass_matrix_full", "forcing_full",
                  "mass_matrix", "forcing", "mass_matrix_kin", "forcing_kin"]
@@ -84,31 +64,27 @@ class TestDataManager:
 
     @pytest.mark.parametrize("dyn_symbols", ["search", "dict", "matrix"])
     def test_rolling_disc_system_dump(self, _setup_rolling_disc, dyn_symbols) -> None:
-        dm = DataManager()
-        dm.process_system(self.system, self._get_dyn_symbols(dyn_symbols))
+        dm = DataManager(self.system, self._get_dyn_symbols(dyn_symbols))
         f = BytesIO()
         pickle.dump(dm, f)
 
     @pytest.mark.parametrize("dyn_symbols", ["not_implemented_method", Symbol("T")])
     def test_invalid_dyn_symbols_type(self, _setup_rolling_disc, dyn_symbols) -> None:
-        dm = DataManager()
         with pytest.raises(TypeError):
-            dm.process_system(self.system, dyn_symbols)
+            DataManager(self.system, dyn_symbols)
 
     def test_system_without_eom(self) -> None:
-        dm = DataManager()
-        with pytest.raises(NotImplementedError):
-            dm.process_system(System())
+        with pytest.raises(AttributeError):
+            DataManager(System())
 
     def test_auto_derivative_name_already_taken(self) -> None:
-        dm = DataManager()
         q1, q2, u1, u2 = dynamicsymbols("q1 dq1 u1 du1")
         sys = System()
         sys.q_ind = [q1, q2]
         sys.u_ind = [u1, u2]
         sys.kdes = [q1.diff() - u1, q2.diff() - u2]
         sys.form_eoms()
-        dm.process_system(sys)
+        dm = DataManager(sys)
         assert dm.q[0] != dm.q[1]
         assert dm.u[0] != dm.u[1]
         assert len(dm.kdes[0].free_symbols.difference(dm.q, dm.u)) == 1
@@ -123,10 +99,8 @@ class TestDataManager:
         sys.add_loads(Force(sys.bodies[-1], f.diff(dynamicsymbols._t) * sys.x))
         sys.form_eoms()
         with pytest.raises(NotImplementedError):
-            dm = DataManager()
-            dm.process_system(sys)
+            DataManager(sys)
 
     def test_invalid_system_type(self) -> None:
-        dm = DataManager()
         with pytest.raises(TypeError):
-            dm.process_system(1)
+            DataManager(n_link_pendulum_on_cart())

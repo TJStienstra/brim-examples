@@ -15,7 +15,7 @@ __all__ = ["DataManager"]
 class DataManager:
     """Data manager for systems, which is made to be pickled using dill."""
 
-    def __init__(self):
+    def __init__(self, system: System, dyn_symbols: Any = "search"):
         self._q_ind = ImmutableMatrix()
         self._q_dep = ImmutableMatrix()
         self._u_ind = ImmutableMatrix()
@@ -25,6 +25,11 @@ class DataManager:
         self._nonhol_coneqs = ImmutableMatrix()
         self._mass_matrix_full = ImmutableMatrix()
         self._forcing_full = ImmutableMatrix()
+        dyn_repl = self._get_dynamicsymbols_repl_dict(dyn_symbols, system)
+        if isinstance(system, System):
+            self._process_system(system, dyn_repl)
+        else:
+            raise TypeError(f"{system} is of type {type(system)} not of type {System}.")
 
     @staticmethod
     def _create_symbol_name(symbol: Function | Derivative):
@@ -69,13 +74,8 @@ class DataManager:
                             f"{dyn_symbols}.")
         return dyn_repl
 
-    def process_system(self, system: System, dyn_symbols: Any = "search"):
+    def _process_system(self, system: System, dyn_repl: dict[Basic, Symbol]) -> None:
         """Process a system and store the data in the data manager."""
-        if not isinstance(system, System):
-            raise TypeError(f"{system} is of type {type(system)} not of {System}.")
-        if system.eom_method is None:
-            raise NotImplementedError(f"{system} has no eom_method set.")
-        dyn_repl = self._get_dynamicsymbols_repl_dict(dyn_symbols, system.eom_method)
         self._q_ind = ImmutableMatrix(msubs(system.q_ind, dyn_repl))
         self._q_dep = ImmutableMatrix(msubs(system.q_dep, dyn_repl))
         self._u_ind = ImmutableMatrix(msubs(system.u_ind, dyn_repl))
