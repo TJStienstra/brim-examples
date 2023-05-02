@@ -58,7 +58,7 @@ source = ["src"]
 
 [tool.coverage.run]
 branch = true
-source = ["brim"]
+source = ["brimopt"]
 
 [tool.coverage.report]
 show_missing = true

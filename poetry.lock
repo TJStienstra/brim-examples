@@ -60,13 +60,14 @@ develop = false
 sympy = {git = "https://github.com/sympy/sympy.git"}
 
 [package.extras]
+parametrize = ["bicycleparameters @ git+https://github.com/moorepants/BicycleParameters", "pandas (>=2.0.0,<3.0.0)", "plotly (>=5.14.1,<6.0.0)"]
 plotting = ["symmeplot @ git+https://github.com/TJStienstra/symmeplot.git"]
 
 [package.source]
 type = "git"
 url = "https://github.com/TJStienstra/brim"
 reference = "HEAD"
-resolved_reference = "25857c0d0960a43ff423d8e2389b6166a4c5bd86"
+resolved_reference = "63111f675d1633ec0f9e4cf39f77335f27083ce8"
 
 [[package]]
 name = "casadi"
