@@ -996,7 +996,7 @@ tests = ["hypothesis (>=5.28)", "pytest (>=6.0)", "pytest-cases (>=2.2.5)"]
 type = "git"
 url = "https://github.com/brocksam/pycollo"
 reference = "HEAD"
-resolved_reference = "a45696d98c51ea7fa108338fd2d8e51340fd51af"
+resolved_reference = "6e01d6c6300856408c942830cf78b4f2ea3fc049"
 
 [[package]]
 name = "pygments"
