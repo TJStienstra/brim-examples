@@ -19,7 +19,7 @@ simulator.controls = {
     for i, fi in enumerate(data.controllable_loads)
 }
 simulator.initialize()
-simulator.solve((0, data.duration), t_eval=data_set.time)
+simulator.solve((0, data_set.time[-1]), t_eval=data_set.time)
 data.simulator = simulator
 with open(filename, "wb") as f:
     cloudpickle.dump(data, f)

@@ -16,7 +16,11 @@ data.max_torque = 10
 data.max_mean_tracking_error = 0.01
 
 data.path = sm.sin(data.disc.q[0]) * 1 - data.disc.q[1]
+data.path_objective = data.path ** 2
 data.load_objective = sum(fi ** 2 for fi in data.controllable_loads)
+data.use_multi_objective = True
+data.expected_loads_integrand_value = 23.84
+data.aimed_path_integrand_value = data.max_mean_tracking_error ** 2 * data.duration
 
 data.x = data.system.q.col_join(data.system.u)
 data.du = sm.Matrix([me.dynamicsymbols(f"d{ui.name}") for ui in data.system.u])
@@ -42,8 +46,7 @@ phase.state_equations = {
     **dict(zip(data.system.u, data.du)),
 }
 phase.path_constraints = data.eoms
-phase.integrand_functions = [
-    data.path ** 2, sum(fi ** 2 for fi in data.controllable_loads)]
+phase.integrand_functions = [data.path_objective, data.load_objective]
 
 # Outbound phase bounds
 phase.bounds.initial_time = 0.0
@@ -61,7 +64,7 @@ phase.bounds.control_variables = {
     **{Ti: [-data.max_torque, data.max_torque] for Ti in data.controllable_loads},
 }
 phase.bounds.integral_variables = [
-    [0, data.max_mean_tracking_error ** 2 * data.duration],
+    [0, data.duration if data.use_multi_objective else data.aimed_path_integrand_value],
     [0, len(data.controllable_loads) * data.duration * data.max_torque ** 2]]
 phase.bounds.initial_state_constraints = {data.system.q[0]: 0.0, data.system.q[4]: 0.0}
 phase.bounds.final_state_constraints = {data.system.q[0]: 2 * sm.pi}
@@ -83,7 +86,15 @@ phase.guess.control_variables = np.concatenate((guess_data.du, guess_data.loads)
 phase.guess.integral_variables = np.array([0, 0])
 
 # Problem definitions
-problem.objective_function = phase.integral_variables[1]
+if data.use_multi_objective:
+    path_weight = data.expected_loads_integrand_value
+    loads_weight = data.aimed_path_integrand_value
+else:
+    path_weight = 0
+    loads_weight = 1
+problem.objective_function = (path_weight * phase.integral_variables[0] +
+                              loads_weight * phase.integral_variables[1])
+
 problem.auxiliary_data = data.constants
 
 constraints = data.system.nonholonomic_constraints.xreplace(
@@ -109,6 +120,9 @@ problem.initialise()
 problem.solve()
 
 data.solution = DataStorage(**{
+    "path_weight": path_weight,
+    "loads_weight": loads_weight,
+    "objective": problem.solution.objective,
     "time": problem.solution._time_[0],
     "state": problem.solution.state[0],
     "du": problem.solution.control[0][:-len(data.controllable_loads), :],

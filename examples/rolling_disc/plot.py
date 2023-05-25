@@ -122,5 +122,5 @@ def animate(i):
 
 ani = FuncAnimation(fig, animate, frames=range(len(t_arr)),
                     interval=1000 * (t_arr[1] - t_arr[0]), blit=False)
-ani.save("animation.gif", dpi=150, fps=int(round(len(t_arr) / data.duration)) + 1)
+ani.save("animation.gif", dpi=150, fps=int(round(len(t_arr) / t_arr[-1])) + 1)
 plt.show()
