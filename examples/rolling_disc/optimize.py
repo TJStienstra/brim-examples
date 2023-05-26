@@ -19,12 +19,18 @@ data.path = sm.sin(data.disc.q[0]) * 1 - data.disc.q[1]
 data.path_objective = data.path ** 2
 data.load_objective = sum(fi ** 2 for fi in data.controllable_loads)
 data.use_multi_objective = True
+data.path_constraints_type = 0
+# 0: Only eoms, enforce nh constraints only for the initial state
+# 1: eoms[:len(u_ind)] + nh constraints, enforces nh constraints for all states
+# 2: all eoms and nh constraints
 data.expected_loads_integrand_value = 23.84
 data.aimed_path_integrand_value = data.max_mean_tracking_error ** 2 * data.duration
 
 data.x = data.system.q.col_join(data.system.u)
 data.du = sm.Matrix([me.dynamicsymbols(f"d{ui.name}") for ui in data.system.u])
 data.eoms = data.system.mass_matrix * data.du - data.system.forcing
+data.nh_constraints = data.system.nonholonomic_constraints.xreplace(
+    data.system.eom_method.kindiffdict())
 
 data.initial_state_constraints = {data.system.q[0]: 0.0, data.system.q[4]: 0.0}
 data.final_state_constraints = {data.system.q[0]: 2 * sm.pi}
@@ -41,11 +47,18 @@ phase = problem.new_phase(name="A")
 phase.state_variables = data.x
 phase.control_variables = data.du.col_join(sm.Matrix(data.controllable_loads))
 phase.state_equations = {
-    **{qi: data.system.eom_method.kindiffdict()[qi.diff(t)]
-       for qi in data.system.q},
+    **{qi: data.system.eom_method.kindiffdict()[qi.diff(t)] for qi in data.system.q},
     **dict(zip(data.system.u, data.du)),
 }
-phase.path_constraints = data.eoms
+if data.path_constraints_type == 0:
+    phase.path_constraints = data.eoms
+elif data.path_constraints_type == 1:
+    phase.path_constraints = (
+            data.eoms[:len(data.system.u_ind)] + data.nh_constraints[:])
+elif data.path_constraints_type == 2:
+    phase.path_constraints = data.eoms.col_join(data.nh_constraints)
+else:
+    raise ValueError("Invalid path constraints type")
 phase.integrand_functions = [data.path_objective, data.load_objective]
 
 # Outbound phase bounds
@@ -97,14 +110,15 @@ problem.objective_function = (path_weight * phase.integral_variables[0] +
 
 problem.auxiliary_data = data.constants
 
-constraints = data.system.nonholonomic_constraints.xreplace(
-    data.system.eom_method.kindiffdict())
-problem.endpoint_constraints = [
-                                   phase.final_state_variables[state.name] -
-                                   phase.initial_state_variables[state.name]
-                                   for state in (*data.system.q[1:4], *data.system.u)
-                               ] + constraints.xreplace(
-    {xi: phase.final_state_variables[xi.name] for xi in data.x})[:]
+periodic_constraints = [
+    phase.final_state_variables[state.name] - phase.initial_state_variables[state.name]
+    for state in (*data.system.q[1:4], *data.system.u)
+]
+if data.path_constraints_type == 0:
+    problem.endpoint_constraints = periodic_constraints + data.nh_constraints.xreplace(
+        {xi: phase.final_state_variables[xi.name] for xi in data.x})[:]
+elif data.path_constraints_type in (1, 2):
+    problem.endpoint_constraints = periodic_constraints
 
 # Problem bounds
 problem.bounds.endpoint_constraints = [0] * len(problem.endpoint_constraints)
