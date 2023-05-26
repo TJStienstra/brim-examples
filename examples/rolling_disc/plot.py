@@ -12,6 +12,7 @@ with open("data.pkl", "rb") as f:
 
 
 results = "simulation"  # "optimization" or "simulation"
+make_animation = True
 
 if results == "optimization":
     t_arr = data.solution.time
@@ -92,6 +93,10 @@ plt.xlabel("q1 (m)")
 plt.ylabel("EoM violation")
 plt.legend()
 
+if not make_animation:
+    plt.show()
+    exit()
+
 p, p_vals = zip(*data.constants.items())
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(15, 15))
 ax.plot(q1_path, q2_path, np.zeros_like(q1_path), "k", label="Target")
@@ -118,7 +123,6 @@ def animate(i):
     sol_line.set_data_3d(*(
         np.append(dat, val) for dat, val in zip(sol_line._verts3d, cp.values[0][0])))
     return *plotter.update(), sol_line,
-
 
 ani = FuncAnimation(fig, animate, frames=range(len(t_arr)),
                     interval=1000 * (t_arr[1] - t_arr[0]), blit=False)
