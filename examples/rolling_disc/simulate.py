@@ -19,7 +19,14 @@ simulator.controls = {
     for i, fi in enumerate(data.controllable_loads)
 }
 simulator.initialize()
-simulator.solve((0, data_set.time[-1]), t_eval=data_set.time)
+try:
+    simulator.solve(data_set.time, solver="dae")
+    print("Simulate with DAE solver")  # noqa: T201
+except ImportError:
+    simulator.solve((0, data_set.time[-1]), t_eval=data_set.time)
+    print("Simulated with ODE solver")  # noqa: T201
+
 data.simulator = simulator
+
 with open(filename, "wb") as f:
     cloudpickle.dump(data, f)

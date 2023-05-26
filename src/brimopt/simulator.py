@@ -200,14 +200,40 @@ class Simulator:
             t, x, self._p_vals, [cf(t) for cf in self._c_funcs])
         return np.linalg.solve(mass_matrix, np.squeeze(forcing))
 
-    def solve(self, t_span: tuple[float, float], **kwargs
+    def _eval_eoms(self, t, x, xd, residual):
+        """Evaluate the residual vector of the equations of motion."""
+        mass_matrix, forcing = self._eval_eoms_matrices(
+            t, x, self._p_vals, [cf(t) for cf in self._c_funcs])
+
+        n_eoms = len(x)
+        n_q_ind, n_q_dep = len(self.system.q_ind), len(self.system.q_dep)
+        n_u_dep = len(self.system.u_dep)
+        n_nh = n_u_dep - n_q_dep
+        n_q = n_q_ind + n_q_dep
+        q, u = x[:n_q], x[n_q:]
+        q_ind, q_dep = q[:n_q_ind], q[n_q_ind:]
+        u_ind, u_dep = u[:-n_u_dep], u[-n_u_dep:]
+
+        residual[:n_eoms] = mass_matrix @ xd - forcing.squeeze()
+        if n_q_dep != 0:
+            residual[n_eoms - n_u_dep:-n_nh] = self._eval_configuration_constraints(
+                q_dep, q_ind, self._p_vals).squeeeze()
+        if n_nh != 0:
+            residual[-n_nh:] = self._eval_velocity_constraints(
+                u_dep, q, u_ind, self._p_vals).squeeze()[-n_nh:]
+
+    def solve(self, t_span: tuple[float, float] | npt.NDArray[np.float64],
+              solver: str = "solve_ivp", **kwargs
               ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
         """Simulate the system.
 
         Parameters
         ----------
-        t_span : tuple[float, float]
-            The start and end times of the simulation.
+        t_span : tuple[float, float] | npt.NDArray[np.float64]
+            The start and end times of the simulation or the times at which to
+            evaluate the solution in case of a DAE solver.
+        solver : str, optional
+            The solver to use, by default "solve_ivp".
         **kwargs
             Keyword arguments to pass to `scipy.integrate.solve_ivp`.
         """
@@ -215,7 +241,22 @@ class Simulator:
             raise RuntimeError("Simulator has not been initialized yet.")
         x0 = np.array([self.initial_conditions[xi] for xi in self.system.q.col_join(
             self.system.u)])
-        sol = solve_ivp(self.eval_rhs, t_span, x0, **kwargs)
-        self._t = sol.t
-        self._x = sol.y
+        if solver == "solve_ivp":
+            sol = solve_ivp(self.eval_rhs, t_span, x0, **kwargs)
+            self._t = sol.t
+            self._x = sol.y
+        elif solver == "dae":
+            from scikits.odes import dae
+            integrator_name = kwargs.pop("integrator_name", "ida")
+            n_constrs = len(self.system.holonomic_constraints) + len(
+                self.system.nonholonomic_constraints)
+            dae_solver = dae(
+                integrator_name, self._eval_eoms,
+                algebraic_vars_idx=range(len(x0) - n_constrs, len(x0)), old_api=False,
+                **kwargs)
+            sol = dae_solver.solve(t_span, x0, self.eval_rhs(t_span[0], x0))
+            self._t = sol.values.t
+            self._x = sol.values.y
+        else:
+            raise ValueError(f"Unknown solver {solver}.")
         return self.t, self.x
