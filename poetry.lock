@@ -1378,20 +1378,6 @@ files = [
 ]
 
 [[package]]
-name = "scikits-odes"
-version = "2.7.0"
-description = "A python module for ordinary differential equation and differential algebraic equation solvers"
-category = "main"
-optional = false
-python-versions = "*"
-files = [
-    {file = "scikits.odes-2.7.0.tar.gz", hash = "sha256:a71e19e1485893754ae8c050668232fcc694f17b83602e75fbebf7bf9f975e1e"},
-]
-
-[package.dependencies]
-scipy = "*"
-
-[[package]]
 name = "scipy"
 version = "1.9.3"
 description = "Fundamental algorithms for scientific computing in Python"
@@ -1670,7 +1656,7 @@ mpmath = ">=0.19"
 type = "git"
 url = "https://github.com/sympy/sympy.git"
 reference = "HEAD"
-resolved_reference = "e3fb9e6b33d7bfea2369cfe42eb6b87d27be848b"
+resolved_reference = "e2cadc140cc969fea038240a39961a66a2f3dd6d"
 
 [[package]]
 name = "tenacity"
@@ -1813,4 +1799,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "e41c5cf7cd853d3b818431eb965e8ab119ab114538b346cb24dcdb3ec99e25be"
+content-hash = "b5e71417dfe49bb3768ee241363ab5cc4171b3afa5ffeb1409cce47209a1530b"
