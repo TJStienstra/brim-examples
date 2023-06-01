@@ -15,7 +15,7 @@ data.duration = 1.0
 data.max_torque = 10
 data.max_mean_tracking_error = 0.01
 
-data.path = sm.sin(data.disc.q[0]) * 1 - data.disc.q[1]
+data.path = sm.sin(data.model.q[0]) * 1 - data.model.q[1]
 data.path_objective = data.path ** 2
 data.load_objective = sum(fi ** 2 for fi in data.controllable_loads)
 data.use_multi_objective = True
@@ -40,7 +40,7 @@ guess_data = None
 t = me.dynamicsymbols._t
 
 # Problem instantiation
-problem = pycollo.OptimalControlProblem(name="Path follow point mass")
+problem = pycollo.OptimalControlProblem(name="Follow sinusoidal path")
 
 # Phase definition
 phase = problem.new_phase(name="A")

@@ -41,7 +41,7 @@ constants[disc.disc.body.central_inertia.to_matrix(disc.disc.frame)[1, 1]] = mr2
 
 
 data = DataStorage(**{
-    "disc": disc,
+    "model": disc,
     "system": system,
     "controllable_loads": controllable_loads,
     "constants": constants,
