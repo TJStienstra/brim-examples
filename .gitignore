@@ -5,3 +5,4 @@ docs/_autosummary
 examples/*/*.gif
 examples/*/*.pkl
 examples/*.gif
+data
