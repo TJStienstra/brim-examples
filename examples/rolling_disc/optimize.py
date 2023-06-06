@@ -79,8 +79,8 @@ phase.bounds.control_variables = {
 phase.bounds.integral_variables = [
     [0, data.duration if data.use_multi_objective else data.aimed_path_integrand_value],
     [0, len(data.controllable_loads) * data.duration * data.max_torque ** 2]]
-phase.bounds.initial_state_constraints = {data.system.q[0]: 0.0, data.system.q[4]: 0.0}
-phase.bounds.final_state_constraints = {data.system.q[0]: 2 * sm.pi}
+phase.bounds.initial_state_constraints = data.initial_state_constraints
+phase.bounds.final_state_constraints = data.final_state_constraints
 phase.bounds.path_constraints = np.array([[0, 0] for _ in phase.path_constraints])
 
 # Outbound phase guess
