@@ -31,6 +31,8 @@ class Simulator:
         self._initial_conditions = None
         self._controls = None
         self._t, self._x = None, None
+        self._p, self._p_vals = None, None
+        self._c, self._c_funcs = None, None
         self._eval_configuration_constraints = None
         self._eval_velocity_constraints = None
         self._eval_eoms_matrices = None
@@ -65,6 +67,11 @@ class Simulator:
         if not isinstance(constants, dict):
             raise TypeError(f"Constants should be of type {type(dict)} not "
                             f"{type(constants)}.")
+        if self._initialized:
+            if set(self.constants.keys()) != set(constants.keys()):
+                self._initialized = False
+            else:
+                self._p_vals = [constants[pi] for pi in self._p]
         self._constants = constants
 
     @property
@@ -82,6 +89,11 @@ class Simulator:
                 raise TypeError(
                     f"Controls should be of type {type(Callable[[float], float])} not "
                     f"{type(control)}.")
+        if self._initialized:
+            if set(self.controls.keys()) != set(controls.keys()):
+                self._initialized = False
+            else:
+                self._c_funcs = [controls[fi] for fi in self._c]
         self._controls = controls
 
     @property
@@ -95,6 +107,8 @@ class Simulator:
             raise TypeError(f"Initial condintions should be of type "
                             f"{type(dict)} not {type(initial_conditions)}.")
         self._initial_conditions = initial_conditions
+        if self._initialized:
+            self.solve_initial_conditions()
 
     def _solve_configuration_constraints(
             self, q_ind: npt.NDArray[np.float64], q_dep_guess: npt.NDArray[np.float64]
