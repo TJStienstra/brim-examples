@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Callable
 
+import numba as nb
 import numpy as np
 import numpy.typing as npt
 from scipy.integrate import solve_ivp
@@ -67,12 +68,12 @@ class Simulator:
         if not isinstance(constants, dict):
             raise TypeError(f"Constants should be of type {type(dict)} not "
                             f"{type(constants)}.")
+        self._constants = constants
         if self._initialized:
             if set(self.constants.keys()) != set(constants.keys()):
                 self._initialized = False
             else:
                 self._p_vals = [constants[pi] for pi in self._p]
-        self._constants = constants
 
     @property
     def controls(self) -> dict[Function, Callable[[float], float]]:
@@ -89,12 +90,12 @@ class Simulator:
                 raise TypeError(
                     f"Controls should be of type {type(Callable[[float], float])} not "
                     f"{type(control)}.")
+        self._controls = controls
         if self._initialized:
             if set(self.controls.keys()) != set(controls.keys()):
                 self._initialized = False
             else:
                 self._c_funcs = [controls[fi] for fi in self._c]
-        self._controls = controls
 
     @property
     def initial_conditions(self) -> dict[Function, float]:
@@ -193,18 +194,19 @@ class Simulator:
         self._c, self._c_funcs = zip(*self.controls.items())
         velocity_constraints = msubs(self.system.holonomic_constraints.diff(t).col_join(
             self.system.nonholonomic_constraints), qdot_to_u)
-        self._eval_configuration_constraints = lambdify(
+        self._eval_configuration_constraints = nb.njit()(lambdify(
             (self.system.q_dep, self.system.q_ind, self._p),
-            self.system.holonomic_constraints[:], cse=True)
-        self._eval_velocity_constraints = lambdify(
+            self.system.holonomic_constraints[:], cse=True))
+        self._eval_velocity_constraints = nb.njit()(lambdify(
             (self.system.u_dep, self.system.q, self.system.u_ind, self._p),
-            velocity_constraints[:], cse=True)
-        self._eval_eoms_matrices = lambdify(
+            velocity_constraints[:], cse=True))
+        self._eval_eoms_matrices = nb.njit()(lambdify(
             (t, self.system.q.col_join(self.system.u), self._p, self._c),
-            (self.system.mass_matrix_full, self.system.forcing_full), cse=True)
+            (self.system.mass_matrix_full, self.system.forcing_full), cse=True))
         self.solve_initial_conditions()
         self._initialized = True
 
+    @nb.njit()
     def eval_rhs(self, t: np.float64, x: npt.NDArray[np.float64]
                  ) -> npt.NDArray[np.float64]:
         """Evaluate the right-hand side of the equations of motion."""
@@ -212,6 +214,7 @@ class Simulator:
             t, x, self._p_vals, [cf(t) for cf in self._c_funcs])
         return np.linalg.solve(mass_matrix, np.squeeze(forcing))
 
+    @nb.njit()
     def _eval_eoms(self, t, x, xd, residual):
         """Evaluate the residual vector of the equations of motion."""
         mass_matrix, forcing = self._eval_eoms_matrices(

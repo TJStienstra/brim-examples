@@ -12,6 +12,7 @@ python = "^3.8"
 brim = {git = "https://github.com/TJStienstra/brim.git", branch = "main", extras=["plotting", "parametrize"]}
 pycollo = {git = "https://github.com/brocksam/pycollo.git"}
 cloudpickle = "^2.2.1"
+numba = "^0.57.1"
 
 
 [tool.poetry.group.lint.dependencies]
