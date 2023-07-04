@@ -18,9 +18,10 @@ disc.tyre = NonHolonomicTyre("tyre")
 disc.define_all()
 
 system = disc.to_system()
-system.apply_gravity(-g * disc.ground.normal)
+normal = disc.ground.get_normal(disc.ground.origin)
+system.apply_gravity(-g * normal)
 r_up = disc.disc.body.masscenter.pos_from(disc.tyre.contact_point).normalize()
-r_long = me.cross(disc.ground.normal, disc.disc.rotation_axis).normalize()
+r_long = me.cross(normal, disc.disc.rotation_axis).normalize()
 system.add_loads(
     me.Torque(
         disc.disc.frame,

@@ -21,7 +21,10 @@ if results == "optimization":
     c_arr = data.solution.loads
 elif results == "simulation":
     t_arr = data.simulator.t
-    x_arr = data.simulator.x
+    if data.simulator.x.shape[0] == len(data.x):
+        x_arr = data.simulator.x
+    else:
+        x_arr = data.simulator.x.T
     c_arr = np.array([
         data.simulator.controls[fi](t_arr) for fi in data.controllable_loads])
     du_arr = np.array([
@@ -100,7 +103,7 @@ if not make_animation:
 p, p_vals = zip(*data.constants.items())
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(15, 15))
 ax.plot(q1_path, q2_path, np.zeros_like(q1_path), "k", label="Target")
-plotter = Plotter(ax, data.model)
+plotter = Plotter.from_model(ax, data.model)
 cp = plotter.add_point(data.model.tyre.contact_point, color="r")
 cp.visible = False
 sol_line, = ax.plot([], [], [], "r", label="Solution")
