@@ -211,14 +211,14 @@ class Simulator:
                  ) -> npt.NDArray[np.float64]:
         """Evaluate the right-hand side of the equations of motion."""
         mass_matrix, forcing = self._eval_eoms_matrices(
-            t, x, self._p_vals, [cf(t) for cf in self._c_funcs])
+            t, x, self._p_vals, [cf(t, x) for cf in self._c_funcs])
         return np.linalg.solve(mass_matrix, np.squeeze(forcing))
 
     @nb.njit()
     def _eval_eoms(self, t, x, xd, residual):
         """Evaluate the residual vector of the equations of motion."""
         mass_matrix, forcing = self._eval_eoms_matrices(
-            t, x, self._p_vals, [cf(t) for cf in self._c_funcs])
+            t, x, self._p_vals, [cf(t, x) for cf in self._c_funcs])
 
         n_eoms = len(x)
         n_q_ind, n_q_dep = len(self.system.q_ind), len(self.system.q_dep)
