@@ -102,9 +102,8 @@ class Simulator:
         """Solve the configuration constraints for the dependent coordinates."""
         if not self.system.q_dep:
             return np.array([])
-        return np.array(fsolve(
-            lambda *args: self._eval_configuration_constraints(*args).squeeze(),
-            q_dep_guess, (q_ind, self._p_vals)))
+        return np.array(fsolve(self._eval_configuration_constraints, q_dep_guess,
+                               args=(q_ind, self._p_vals)))
 
     def _solve_velocity_constraints(
             self, q: npt.NDArray[np.float64], u_ind: npt.NDArray[np.float64],
@@ -112,9 +111,8 @@ class Simulator:
         """Solve the velocity constraints for the dependent speeds."""
         if not self.system.u_dep:
             return np.array([])
-        return np.array(fsolve(
-            lambda *args: self._eval_velocity_constraints(*args).squeeze(),
-            u_dep_guess, (q, u_ind, self._p_vals)))
+        return np.array(fsolve(self._eval_velocity_constraints, u_dep_guess,
+                               args=(q, u_ind, self._p_vals)))
 
     def solve_initial_conditions(self) -> None:
         """Solve the initial conditions for the dependent coordinates and speeds."""
@@ -183,10 +181,10 @@ class Simulator:
             self.system.nonholonomic_constraints), qdot_to_u)
         self._eval_configuration_constraints = lambdify(
             (self.system.q_dep, self.system.q_ind, self._p),
-            self.system.holonomic_constraints, cse=True)
+            self.system.holonomic_constraints[:], cse=True)
         self._eval_velocity_constraints = lambdify(
             (self.system.u_dep, self.system.q, self.system.u_ind, self._p),
-            velocity_constraints, cse=True)
+            velocity_constraints[:], cse=True)
         self._eval_eoms_matrices = lambdify(
             (t, self.system.q.col_join(self.system.u), self._p, self._c),
             (self.system.mass_matrix_full, self.system.forcing_full), cse=True)
@@ -217,10 +215,10 @@ class Simulator:
         residual[:n_eoms] = mass_matrix @ xd - forcing.squeeze()
         if n_q_dep != 0:
             residual[n_eoms - n_u_dep:-n_nh] = self._eval_configuration_constraints(
-                q_dep, q_ind, self._p_vals).squeeeze()
+                q_dep, q_ind, self._p_vals)
         if n_nh != 0:
             residual[-n_nh:] = self._eval_velocity_constraints(
-                u_dep, q, u_ind, self._p_vals).squeeze()[-n_nh:]
+                u_dep, q, u_ind, self._p_vals)[-n_nh:]
 
     def solve(self, t_span: tuple[float, float] | npt.NDArray[np.float64],
               solver: str = "solve_ivp", **kwargs
