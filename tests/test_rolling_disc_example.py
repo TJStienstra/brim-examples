@@ -21,14 +21,17 @@ def cleanup(request):
 
 @pytest.mark.dependency()
 def test_rolling_disc_model(cleanup):
-    subprocess.call(fr"python {examples_dir}\rolling_disc\model.py")
+    file = os.path.join(examples_dir, "rolling_disc", "model.py")
+    subprocess.call(fr"python {file}")
 
 
 @pytest.mark.dependency(depends=["test_rolling_disc_model"])
 def test_rolling_disc_optimize(cleanup):
-    subprocess.call(fr"python {examples_dir}\rolling_disc\optimize.py")
+    file = os.path.join(examples_dir, "rolling_disc", "optimize.py")
+    subprocess.call(fr"python {file}")
 
 
 @pytest.mark.dependency(depends=["test_rolling_disc_optimize"])
 def test_rolling_disc_simulate(cleanup):
-    subprocess.call(fr"python {examples_dir}\rolling_disc\simulate.py")
+    file = os.path.join(examples_dir, "rolling_disc", "simulate.py")
+    subprocess.call(fr"python {file}")
