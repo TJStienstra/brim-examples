@@ -26,7 +26,8 @@ elif results == "simulation":
     else:
         x_arr = data.simulator.x.T
     c_arr = np.array([
-        data.simulator.controls[fi](t_arr) for fi in data.controllable_loads])
+        [data.simulator.controls[fi](ti, x_arr[:, i]) for i, ti in enumerate(t_arr)]
+        for fi in data.controllable_loads])
     du_arr = np.array([
         data.simulator.eval_rhs(t_arr[i], x_arr[:, i])[-len(data.system.u):]
         for i in range(len(t_arr))]).T

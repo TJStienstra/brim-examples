@@ -10,13 +10,19 @@ with open(filename, "rb") as f:
 
 data_set = data.solution
 
+
+def create_control_function(i):
+    """Create a control function for the i-th controllable load."""
+    spline_approximation = CubicSpline(data_set.time, data_set.loads[i, :])
+    return lambda t, x: spline_approximation(t)
+
+
 # Create a simulator object
 simulator = Simulator(data.system)
 simulator.constants = data.constants
 simulator.initial_conditions = dict(zip(data.x, data_set.state[:, 0]))
 simulator.controls = {
-    fi: CubicSpline(data_set.time, data_set.loads[i, :])
-    for i, fi in enumerate(data.controllable_loads)
+    fi: create_control_function(i) for i, fi in enumerate(data.controllable_loads)
 }
 simulator.initialize()
 try:

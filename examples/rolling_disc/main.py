@@ -11,18 +11,22 @@ The disc is constrained to follow the path within a certain mean tracking error.
 advantage of applying the path as a constraint is that the objective function stays
 single-objective function.
 """
+import os
+import subprocess
+
+directory = os.path.dirname(__file__)
 print("Modeling...")  # noqa: T201
-exec("import model")
+subprocess.call(fr"python {directory}\model.py")
 print("Modeling finished.")  # noqa: T201
 
 print("Optimizing...")  # noqa: T201
-exec("import optimize")
+subprocess.call(fr"python {directory}\optimize.py")
 print("Optimization finished.")  # noqa: T201
 
 print("Simulating...")  # noqa: T201
-exec("import simulate")
+subprocess.call(fr"python {directory}\simulate.py")
 print("Simulation finished.")  # noqa: T201
 
 print("Plotting...")  # noqa: T201
-exec("import plot")
+subprocess.call(fr"python {directory}\plot.py")
 print("Plotting finished.")  # noqa: T201
