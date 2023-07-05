@@ -73,7 +73,7 @@ class Simulator:
             if set(self.constants.keys()) != set(constants.keys()):
                 self._initialized = False
             else:
-                self._p_vals = [constants[pi] for pi in self._p]
+                self._p_vals = tuple(constants[pi] for pi in self._p)
 
     @property
     def controls(self) -> dict[Function, Callable[[float], float]]:
@@ -95,7 +95,7 @@ class Simulator:
             if set(self.controls.keys()) != set(controls.keys()):
                 self._initialized = False
             else:
-                self._c_funcs = [controls[fi] for fi in self._c]
+                self._c_funcs = tuple(controls[fi] for fi in self._c)
 
     @property
     def initial_conditions(self) -> dict[Function, float]:
@@ -110,6 +110,41 @@ class Simulator:
         self._initial_conditions = initial_conditions
         if self._initialized:
             self.solve_initial_conditions()
+
+    def _compile_with_numba(self) -> None:
+        """Compile the lambdified functions with numba."""
+        q_ind = np.array([self.initial_conditions[qi] for qi in self.system.q_ind])
+        q_dep = np.array([
+            self.initial_conditions.get(qi, 0.) for qi in self.system.q_dep])
+        u_ind = np.array([self.initial_conditions[ui] for ui in self.system.u_ind])
+        u_dep = np.array([
+            self.initial_conditions.get(ui, 0.) for ui in self.system.u_dep])
+        x = np.concatenate((q_ind, q_dep, u_ind, u_dep))
+        ctrl = tuple(cf(0., x) for cf in self._c_funcs)
+        try:
+            eval_config_nb = nb.njit()(self._eval_configuration_constraints)
+            eval_config_nb(q_dep, q_ind, self._p_vals)
+            self._eval_configuration_constraints = eval_config_nb
+        except Exception as e:
+            msg = (f"Could not compile lambdified configuration constraint. "
+                   f"Execution raised the following error:\n{e}")
+            print(msg)  # noqa: T201
+        try:
+            eval_vel_nb = nb.njit()(self._eval_velocity_constraints)
+            eval_vel_nb(u_dep, self.system.q, u_ind, self._p_vals)
+            self._eval_velocity_constraints = eval_vel_nb
+        except Exception as e:
+            msg = (f"Could not compile lambdified velocity constraint. "
+                   f"Execution raised the following error:\n{e}")
+            print(msg)  # noqa: T201
+        try:
+            eval_eoms_nb = nb.njit()(self._eval_eoms_matrices)
+            eval_eoms_nb(0., x, self._p_vals, ctrl)
+            self._eval_eoms_matrices = eval_eoms_nb
+        except Exception as e:
+            msg = (f"Could not compile lambdified equations of motion. "
+                   f"Execution raised the following error:\n{e}")
+            print(msg)  # noqa: T201
 
     def _solve_configuration_constraints(
             self, q_ind: npt.NDArray[np.float64], q_dep_guess: npt.NDArray[np.float64]
@@ -194,31 +229,32 @@ class Simulator:
         self._c, self._c_funcs = zip(*self.controls.items())
         velocity_constraints = msubs(self.system.holonomic_constraints.diff(t).col_join(
             self.system.nonholonomic_constraints), qdot_to_u)
-        self._eval_configuration_constraints = nb.njit()(lambdify(
+        self._eval_configuration_constraints = lambdify(
             (self.system.q_dep, self.system.q_ind, self._p),
-            self.system.holonomic_constraints[:], cse=True))
-        self._eval_velocity_constraints = nb.njit()(lambdify(
+            self.system.holonomic_constraints[:], cse=True)
+        self._eval_velocity_constraints = lambdify(
             (self.system.u_dep, self.system.q, self.system.u_ind, self._p),
-            velocity_constraints[:], cse=True))
-        self._eval_eoms_matrices = nb.njit()(lambdify(
+            velocity_constraints[:], cse=True)
+        self._eval_eoms_matrices = lambdify(
             (t, self.system.q.col_join(self.system.u), self._p, self._c),
-            (self.system.mass_matrix_full, self.system.forcing_full), cse=True))
+            (self.system.mass_matrix_full, self.system.forcing_full), cse=True)
+        self._compile_with_numba()
         self.solve_initial_conditions()
         self._initialized = True
 
-    @nb.njit()
+    # @nb.njit()
     def eval_rhs(self, t: np.float64, x: npt.NDArray[np.float64]
                  ) -> npt.NDArray[np.float64]:
         """Evaluate the right-hand side of the equations of motion."""
         mass_matrix, forcing = self._eval_eoms_matrices(
-            t, x, self._p_vals, [cf(t, x) for cf in self._c_funcs])
+            t, x, self._p_vals, tuple(cf(t, x) for cf in self._c_funcs))
         return np.linalg.solve(mass_matrix, np.squeeze(forcing))
 
-    @nb.njit()
+    # @nb.njit()
     def _eval_eoms(self, t, x, xd, residual):
         """Evaluate the residual vector of the equations of motion."""
         mass_matrix, forcing = self._eval_eoms_matrices(
-            t, x, self._p_vals, [cf(t, x) for cf in self._c_funcs])
+            t, x, self._p_vals, tuple(cf(t, x) for cf in self._c_funcs))
 
         n_eoms = len(x)
         n_q_ind, n_q_dep = len(self.system.q_ind), len(self.system.q_dep)
