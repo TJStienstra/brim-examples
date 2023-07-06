@@ -61,6 +61,18 @@ q2_arr = x_arr[1, :]
 print("Mean tracking error:", abs(  # noqa: T201
     sm.lambdify(data.system.q[:2], data.path)(x_arr[0, :], x_arr[1, :])).mean())
 
+fig, axs = plt.subplots(2, 1, sharex=True)
+axs[0].plot(q1_path, q2_path, color="#000000", label="Target")
+axs[0].plot(q1_arr, q2_arr, label="Solution")
+axs[0].legend()
+axs[0].set_ylabel("q2 (m)")
+axs[0].set_aspect("equal", adjustable="box")
+for i, state in enumerate(data.system.q[2:-1], start=2):
+    axs[1].plot(q1_arr, x_arr[i], label=f"{state.name}")
+axs[1].set_xlabel("q1 (m)")
+axs[1].set_ylabel("Angle (rad)")
+axs[1].legend()
+
 plt.figure()
 plt.plot(q1_path, q2_path, color="#000000", label="Target")
 plt.plot(q1_arr, q2_arr, label="Solution")
