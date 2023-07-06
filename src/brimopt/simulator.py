@@ -130,6 +130,7 @@ class Simulator:
         """Compile the lambdified functions with numba."""
         if not self._initialized:
             raise ValueError("Simulator has not been initialized.")
+        # Get some test values for the functions
         q_ind = np.array([self.initial_conditions[qi] for qi in self.system.q_ind],
                          dtype=np.float64)
         q_dep = np.array([self.initial_conditions.get(qi, 0.)
@@ -141,10 +142,17 @@ class Simulator:
                           for ui in self.system.u_dep], dtype=np.float64)
         x = np.concatenate((q_all, u_ind, u_dep))
         ctrl = np.array([cf(0., x) for cf in self._c_funcs], dtype=np.float64)
+        # Define the signatures of the functions
+        config_signature = nb.types.List(nb.float64)(
+            nb.float64[:], nb.float64[:], nb.float64[:])
+        vel_signature = nb.types.List(nb.float64)(
+            nb.float64[:], nb.float64[:], nb.float64[:], nb.float64[:])
+        eoms_signature = nb.types.Tuple([nb.float64[:, :], nb.float64[:, :]])(
+                    nb.float64, nb.float64[:], nb.float64[:], nb.float64[:])
+        # Compile the functions
         if self.system.q_dep:
             try:
-                eval_config_nb = nb.njit(nb.types.List(nb.float64)(
-                    nb.float64[:], nb.float64[:], nb.float64[:]))(
+                eval_config_nb = nb.njit(config_signature)(
                     self._eval_configuration_constraints)
                 eval_config_nb(q_dep, q_ind, self._p_vals)
                 self._eval_configuration_constraints = eval_config_nb
@@ -154,9 +162,7 @@ class Simulator:
                 print(msg)  # noqa: T201
         if self.system.u_dep:
             try:
-                eval_vel_nb = nb.njit(nb.types.List(nb.float64)(
-                    nb.float64[:], nb.float64[:], nb.float64[:], nb.float64[:]))(
-                    self._eval_velocity_constraints)
+                eval_vel_nb = nb.njit(vel_signature)(self._eval_velocity_constraints)
                 eval_vel_nb(u_dep, q_all, u_ind, self._p_vals)
                 self._eval_velocity_constraints = eval_vel_nb
             except Exception as e:
@@ -164,11 +170,9 @@ class Simulator:
                        f"Execution raised the following error:\n{e}")
                 print(msg)  # noqa: T201
         try:
-            self._eval_eoms_matrices = nb.njit(
-                nb.types.Tuple([nb.float64[:, :], nb.float64[:, :]])(
-                    nb.float64, nb.float64[:], nb.float64[:], nb.float64[:]))(
-                self._eval_eoms_matrices)
-            self._eval_eoms_matrices(0., x, self._p_vals, ctrl)
+            eval_eoms_nb = nb.njit(eoms_signature)(self._eval_eoms_matrices)
+            eval_eoms_nb(0., x, self._p_vals, ctrl)
+            self._eval_eoms_matrices = eval_eoms_nb
         except Exception as e:
             msg = (f"Could not compile lambdified equations of motion. "
                    f"Execution raised the following error:\n{e}")
