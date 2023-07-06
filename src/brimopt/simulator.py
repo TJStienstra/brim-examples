@@ -38,6 +38,9 @@ class Simulator:
         self._eval_velocity_constraints = None
         self._eval_eoms_matrices = None
         self._initialized = False
+        self._n_qind, self._n_qdep, self._n_q, self._n_uind, self._n_udep, self._n_u = (
+            None, None, None, None, None, None)
+        self._n_x = None
 
     @property
     def t(self) -> npt.NDArray[np.float64]:
@@ -113,6 +116,11 @@ class Simulator:
 
     def _compile_with_numba(self) -> None:
         """Compile the lambdified functions with numba."""
+
+        def eval_eoms_reshape(t, x, p, ctrl):
+            mass_matrix, forcing = eval_eoms(t, x, p, ctrl)
+            return mass_matrix.reshape((n_x, n_x)), forcing.reshape((n_x, ))
+
         q_ind = np.array([self.initial_conditions[qi] for qi in self.system.q_ind])
         q_dep = np.array([
             self.initial_conditions.get(qi, 0.) for qi in self.system.q_dep])
@@ -121,6 +129,7 @@ class Simulator:
         u_dep = np.array([
             self.initial_conditions.get(ui, 0.) for ui in self.system.u_dep])
         x = np.concatenate((q_all, u_ind, u_dep))
+        n_x = self._n_x  # Assign to local variable for numba
         ctrl = tuple(cf(0., x) for cf in self._c_funcs)
         if self.system.q_dep:
             try:
@@ -141,13 +150,14 @@ class Simulator:
                        f"Execution raised the following error:\n{e}")
                 print(msg)  # noqa: T201
         try:
-            eval_eoms_nb = nb.njit()(self._eval_eoms_matrices)
-            eval_eoms_nb(0., x, self._p_vals, ctrl)
-            self._eval_eoms_matrices = eval_eoms_nb
+            eval_eoms = nb.njit()(self._eval_eoms_matrices)
+            eval_eoms(0., x, self._p_vals, ctrl)
         except Exception as e:
             msg = (f"Could not compile lambdified equations of motion. "
                    f"Execution raised the following error:\n{e}")
             print(msg)  # noqa: T201
+            eval_eoms = self._eval_eoms_matrices
+        self._eval_eoms_matrices = eval_eoms_reshape
 
     def _solve_configuration_constraints(
             self, q_ind: npt.NDArray[np.float64], q_dep_guess: npt.NDArray[np.float64]
@@ -228,6 +238,10 @@ class Simulator:
         qdot_to_u = self.system.eom_method.kindiffdict() if isinstance(
             self.system.eom_method, KanesMethod) else {}
         t = dynamicsymbols._t
+        self._n_qind, self._n_qdep = len(self.system.q_ind), len(self.system.q_dep)
+        self._n_uind, self._n_udep = len(self.system.u_ind), len(self.system.u_dep)
+        self._n_q, self._n_u = self._n_qind + self._n_qdep, self._n_uind + self._n_udep
+        self._n_x = self._n_q + self._n_u
         self._p, self._p_vals = zip(*self.constants.items())
         self._c, self._c_funcs = zip(*self.controls.items())
         velocity_constraints = msubs(self.system.holonomic_constraints.diff(t).col_join(
@@ -238,9 +252,11 @@ class Simulator:
         self._eval_velocity_constraints = lambdify(
             (self.system.u_dep, self.system.q, self.system.u_ind, self._p),
             velocity_constraints[:], cse=True)
+        # Fix for https://github.com/numba/numba/issues/3709
         self._eval_eoms_matrices = lambdify(
             (t, self.system.q.col_join(self.system.u), self._p, self._c),
-            (self.system.mass_matrix_full, self.system.forcing_full), cse=True)
+            (self.system.mass_matrix_full.reshape(1, self._n_x * self._n_x),
+             self.system.forcing_full.reshape(1, self._n_x)), cse=True)
         self._compile_with_numba()
         self.solve_initial_conditions()
         self._initialized = True
@@ -251,7 +267,7 @@ class Simulator:
         """Evaluate the right-hand side of the equations of motion."""
         mass_matrix, forcing = self._eval_eoms_matrices(
             t, x, self._p_vals, tuple(cf(t, x) for cf in self._c_funcs))
-        return np.linalg.solve(mass_matrix, np.squeeze(forcing))
+        return np.linalg.solve(mass_matrix, forcing)
 
     # @nb.njit()
     def _eval_eoms(self, t, x, xd, residual):
@@ -259,19 +275,15 @@ class Simulator:
         mass_matrix, forcing = self._eval_eoms_matrices(
             t, x, self._p_vals, tuple(cf(t, x) for cf in self._c_funcs))
 
-        n_eoms = len(x)
-        n_q_ind, n_q_dep = len(self.system.q_ind), len(self.system.q_dep)
-        n_u_dep = len(self.system.u_dep)
-        n_nh = n_u_dep - n_q_dep
-        n_q = n_q_ind + n_q_dep
-        q, u = x[:n_q], x[n_q:]
-        q_ind, q_dep = q[:n_q_ind], q[n_q_ind:]
-        u_ind, u_dep = u[:-n_u_dep], u[-n_u_dep:]
+        n_nh = self._n_udep - self._n_qdep
+        q, u = x[:self._n_q], x[self._n_q:]
+        q_ind, q_dep = q[:self._n_qind], q[self._n_qind:]
+        u_ind, u_dep = u[:-self._n_udep], u[-self._n_udep:]
 
-        residual[:n_eoms] = mass_matrix @ xd - forcing.squeeze()
-        if n_q_dep != 0:
-            residual[n_eoms - n_u_dep:-n_nh] = self._eval_configuration_constraints(
-                q_dep, q_ind, self._p_vals)
+        residual[:self._n_x] = mass_matrix @ xd - forcing
+        if self._n_qdep != 0:
+            residual[self._n_x - self._n_udep:-n_nh] = (
+                self._eval_configuration_constraints(q_dep, q_ind, self._p_vals))
         if n_nh != 0:
             residual[-n_nh:] = self._eval_velocity_constraints(
                 u_dep, q, u_ind, self._p_vals)[-n_nh:]
