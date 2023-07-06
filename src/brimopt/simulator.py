@@ -76,10 +76,12 @@ class Simulator:
             if set(self.constants.keys()) != set(constants.keys()):
                 self._initialized = False
             else:
-                self._p_vals = tuple(constants[pi] for pi in self._p)
+                self._p_vals = np.array(
+                    [constants[pi] for pi in self._p], dtype=np.float64)
 
     @property
-    def controls(self) -> dict[Function, Callable[[float], float]]:
+    def controls(self
+                 ) -> dict[Function, Callable[[float, npt.NDArray[np.float64]], float]]:
         """Controls of the system."""
         return self._controls
 
@@ -121,19 +123,23 @@ class Simulator:
             mass_matrix, forcing = eval_eoms(t, x, p, ctrl)
             return mass_matrix.reshape((n_x, n_x)), forcing.reshape((n_x, ))
 
-        q_ind = np.array([self.initial_conditions[qi] for qi in self.system.q_ind])
-        q_dep = np.array([
-            self.initial_conditions.get(qi, 0.) for qi in self.system.q_dep])
+        q_ind = np.array([self.initial_conditions[qi] for qi in self.system.q_ind],
+                         dtype=np.float64)
+        q_dep = np.array([self.initial_conditions.get(qi, 0.)
+                          for qi in self.system.q_dep], dtype=np.float64)
         q_all = np.concatenate((q_ind, q_dep))
-        u_ind = np.array([self.initial_conditions[ui] for ui in self.system.u_ind])
-        u_dep = np.array([
-            self.initial_conditions.get(ui, 0.) for ui in self.system.u_dep])
+        u_ind = np.array([self.initial_conditions[ui] for ui in self.system.u_ind],
+                         dtype=np.float64)
+        u_dep = np.array([self.initial_conditions.get(ui, 0.)
+                          for ui in self.system.u_dep], dtype=np.float64)
         x = np.concatenate((q_all, u_ind, u_dep))
         n_x = self._n_x  # Assign to local variable for numba
-        ctrl = tuple(cf(0., x) for cf in self._c_funcs)
+        ctrl = np.array([cf(0., x) for cf in self._c_funcs], dtype=np.float64)
         if self.system.q_dep:
             try:
-                eval_config_nb = nb.njit()(self._eval_configuration_constraints)
+                eval_config_nb = nb.njit(nb.types.List(nb.float64)(
+                    nb.float64[:], nb.float64[:], nb.float64[:]))(
+                    self._eval_configuration_constraints)
                 eval_config_nb(q_dep, q_ind, self._p_vals)
                 self._eval_configuration_constraints = eval_config_nb
             except Exception as e:
@@ -142,7 +148,9 @@ class Simulator:
                 print(msg)  # noqa: T201
         if self.system.u_dep:
             try:
-                eval_vel_nb = nb.njit()(self._eval_velocity_constraints)
+                eval_vel_nb = nb.njit(nb.types.List(nb.float64)(
+                    nb.float64[:], nb.float64[:], nb.float64[:], nb.float64[:]))(
+                    self._eval_velocity_constraints)
                 eval_vel_nb(u_dep, q_all, u_ind, self._p_vals)
                 self._eval_velocity_constraints = eval_vel_nb
             except Exception as e:
@@ -150,7 +158,9 @@ class Simulator:
                        f"Execution raised the following error:\n{e}")
                 print(msg)  # noqa: T201
         try:
-            eval_eoms = nb.njit()(self._eval_eoms_matrices)
+            eval_eoms = nb.njit(nb.types.Tuple([nb.float64[:, :], nb.float64[:, :]])(
+                nb.float64, nb.float64[:], nb.float64[:], nb.float64[:]))(
+                self._eval_eoms_matrices)
             eval_eoms(0., x, self._p_vals, ctrl)
         except Exception as e:
             msg = (f"Could not compile lambdified equations of motion. "
@@ -243,6 +253,7 @@ class Simulator:
         self._n_q, self._n_u = self._n_qind + self._n_qdep, self._n_uind + self._n_udep
         self._n_x = self._n_q + self._n_u
         self._p, self._p_vals = zip(*self.constants.items())
+        self._p_vals = np.array(self._p_vals, dtype=np.float64)
         self._c, self._c_funcs = zip(*self.controls.items())
         velocity_constraints = msubs(self.system.holonomic_constraints.diff(t).col_join(
             self.system.nonholonomic_constraints), qdot_to_u)
@@ -266,14 +277,16 @@ class Simulator:
                  ) -> npt.NDArray[np.float64]:
         """Evaluate the right-hand side of the equations of motion."""
         mass_matrix, forcing = self._eval_eoms_matrices(
-            t, x, self._p_vals, tuple(cf(t, x) for cf in self._c_funcs))
+            t, x, self._p_vals,
+            np.array([cf(t, x) for cf in self._c_funcs], dtype=np.float64))
         return np.linalg.solve(mass_matrix, forcing)
 
     # @nb.njit()
     def _eval_eoms(self, t, x, xd, residual):
         """Evaluate the residual vector of the equations of motion."""
         mass_matrix, forcing = self._eval_eoms_matrices(
-            t, x, self._p_vals, tuple(cf(t, x) for cf in self._c_funcs))
+            t, x, self._p_vals,
+            np.array([cf(t, x) for cf in self._c_funcs], dtype=np.float64))
 
         n_nh = self._n_udep - self._n_qdep
         q, u = x[:self._n_q], x[self._n_q:]
