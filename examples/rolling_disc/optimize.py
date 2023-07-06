@@ -23,7 +23,7 @@ data.path_constraints_type = 0
 # 0: Only eoms, enforce nh constraints only for the initial state
 # 1: eoms[:len(u_ind)] + nh constraints, enforces nh constraints for all states
 # 2: all eoms and nh constraints
-data.expected_loads_integrand_value = 23.84
+data.expected_loads_integrand_value = 24.5
 data.aimed_path_integrand_value = data.max_mean_tracking_error ** 2 * data.duration
 
 data.x = data.system.q.col_join(data.system.u)
