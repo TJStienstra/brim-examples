@@ -14,7 +14,7 @@ data_set = data.solution
 def create_control_function(i):
     """Create a control function for the i-th controllable load."""
     spline_approximation = CubicSpline(data_set.time, data_set.loads[i, :])
-    return lambda t, x: spline_approximation(t)
+    return lambda t, x: float(spline_approximation(t))
 
 
 # Create a simulator object
@@ -25,6 +25,7 @@ simulator.controls = {
     fi: create_control_function(i) for i, fi in enumerate(data.controllable_loads)
 }
 simulator.initialize()
+simulator.compile_with_numba()
 try:
     simulator.solve(data_set.time, solver="dae")
     print("Simulate with DAE solver")  # noqa: T201
