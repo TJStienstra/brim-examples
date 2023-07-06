@@ -109,11 +109,34 @@ plt.xlabel("q1 (m)")
 plt.ylabel("EoM violation")
 plt.legend()
 
+p, p_vals = zip(*data.constants.items())
+fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(15, 15))
+ax.plot(q1_path, q2_path, np.zeros_like(q1_path), "k", label="Target")
+ax.plot(q1_arr, q2_arr, np.zeros_like(q1_arr), "r", label="Solution")
+n_frames = 10
+for i in range(n_frames):
+    plotter = Plotter.from_model(ax, data.model)
+    plotter.add_point(data.model.tyre.contact_point, color="r")
+    plotter.lambdify_system((data.system.q[:] + data.system.u[:], p))
+    for artist in plotter.artists:
+        artist.set_alpha(i * 1 / (n_frames + 1) + 1 / n_frames)
+    plotter.evaluate_system(
+        x_arr[:, int(round(i * (len(t_arr) - 1) / (n_frames - 1)))].flatten(), p_vals)
+    plotter.plot()
+X, Y = np.meshgrid(np.linspace(-1, 2 * np.pi + 1, 100), np.linspace(-1.5, 1.5, 100))
+ax.plot_wireframe(X, Y, np.zeros_like(X), color="k", alpha=0.3, rstride=10, cstride=10)
+ax.invert_zaxis()
+ax.invert_yaxis()
+ax.set_xlim(-1, 2 * np.pi + 1)
+ax.set_ylim(-1.5, 1.5)
+ax.view_init(18, 18)
+ax.set_aspect("equal")
+ax.axis("off")
+
 if not make_animation:
     plt.show()
     exit()
 
-p, p_vals = zip(*data.constants.items())
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(15, 15))
 ax.plot(q1_path, q2_path, np.zeros_like(q1_path), "k", label="Target")
 plotter = Plotter.from_model(ax, data.model)
