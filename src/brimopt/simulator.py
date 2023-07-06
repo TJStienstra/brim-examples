@@ -116,13 +116,20 @@ class Simulator:
         if self._initialized:
             self.solve_initial_conditions()
 
-    def _compile_with_numba(self) -> None:
+    def _eval_eoms_reshaped(
+            self, t: float, x: npt.NDArray[np.float64]
+    ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+        """Evaluate the equations of motion and reshape the output."""
+        mass_matrix, forcing = self._eval_eoms_matrices(
+            t, x, self._p_vals,
+            np.array([cf(t, x) for cf in self._c_funcs], dtype=np.float64))
+        return (mass_matrix.reshape((self._n_x, self._n_x)),
+                forcing.reshape((self._n_x, )))
+
+    def compile_with_numba(self) -> None:
         """Compile the lambdified functions with numba."""
-
-        def eval_eoms_reshape(t, x, p, ctrl):
-            mass_matrix, forcing = eval_eoms(t, x, p, ctrl)
-            return mass_matrix.reshape((n_x, n_x)), forcing.reshape((n_x, ))
-
+        if not self._initialized:
+            raise ValueError("Simulator has not been initialized.")
         q_ind = np.array([self.initial_conditions[qi] for qi in self.system.q_ind],
                          dtype=np.float64)
         q_dep = np.array([self.initial_conditions.get(qi, 0.)
@@ -133,7 +140,6 @@ class Simulator:
         u_dep = np.array([self.initial_conditions.get(ui, 0.)
                           for ui in self.system.u_dep], dtype=np.float64)
         x = np.concatenate((q_all, u_ind, u_dep))
-        n_x = self._n_x  # Assign to local variable for numba
         ctrl = np.array([cf(0., x) for cf in self._c_funcs], dtype=np.float64)
         if self.system.q_dep:
             try:
@@ -158,16 +164,15 @@ class Simulator:
                        f"Execution raised the following error:\n{e}")
                 print(msg)  # noqa: T201
         try:
-            eval_eoms = nb.njit(nb.types.Tuple([nb.float64[:, :], nb.float64[:, :]])(
-                nb.float64, nb.float64[:], nb.float64[:], nb.float64[:]))(
+            self._eval_eoms_matrices = nb.njit(
+                nb.types.Tuple([nb.float64[:, :], nb.float64[:, :]])(
+                    nb.float64, nb.float64[:], nb.float64[:], nb.float64[:]))(
                 self._eval_eoms_matrices)
-            eval_eoms(0., x, self._p_vals, ctrl)
+            self._eval_eoms_matrices(0., x, self._p_vals, ctrl)
         except Exception as e:
             msg = (f"Could not compile lambdified equations of motion. "
                    f"Execution raised the following error:\n{e}")
             print(msg)  # noqa: T201
-            eval_eoms = self._eval_eoms_matrices
-        self._eval_eoms_matrices = eval_eoms_reshape
 
     def _solve_configuration_constraints(
             self, q_ind: npt.NDArray[np.float64], q_dep_guess: npt.NDArray[np.float64]
@@ -268,7 +273,6 @@ class Simulator:
             (t, self.system.q.col_join(self.system.u), self._p, self._c),
             (self.system.mass_matrix_full.reshape(1, self._n_x * self._n_x),
              self.system.forcing_full.reshape(1, self._n_x)), cse=True)
-        self._compile_with_numba()
         self.solve_initial_conditions()
         self._initialized = True
 
@@ -276,17 +280,15 @@ class Simulator:
     def eval_rhs(self, t: np.float64, x: npt.NDArray[np.float64]
                  ) -> npt.NDArray[np.float64]:
         """Evaluate the right-hand side of the equations of motion."""
-        mass_matrix, forcing = self._eval_eoms_matrices(
-            t, x, self._p_vals,
-            np.array([cf(t, x) for cf in self._c_funcs], dtype=np.float64))
+        mass_matrix, forcing = self._eval_eoms_reshaped(t, x)
         return np.linalg.solve(mass_matrix, forcing)
 
     # @nb.njit()
-    def _eval_eoms(self, t, x, xd, residual):
+    def _eval_eoms(self, t: float, x: npt.NDArray[np.float64],
+                   xd: npt.NDArray[np.float64], residual: npt.NDArray[np.float64]
+                   ) -> None:
         """Evaluate the residual vector of the equations of motion."""
-        mass_matrix, forcing = self._eval_eoms_matrices(
-            t, x, self._p_vals,
-            np.array([cf(t, x) for cf in self._c_funcs], dtype=np.float64))
+        mass_matrix, forcing = self._eval_eoms_reshaped(t, x)
 
         n_nh = self._n_udep - self._n_qdep
         q, u = x[:self._n_q], x[self._n_q:]
