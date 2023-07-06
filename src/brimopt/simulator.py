@@ -116,27 +116,30 @@ class Simulator:
         q_ind = np.array([self.initial_conditions[qi] for qi in self.system.q_ind])
         q_dep = np.array([
             self.initial_conditions.get(qi, 0.) for qi in self.system.q_dep])
+        q_all = np.concatenate((q_ind, q_dep))
         u_ind = np.array([self.initial_conditions[ui] for ui in self.system.u_ind])
         u_dep = np.array([
             self.initial_conditions.get(ui, 0.) for ui in self.system.u_dep])
-        x = np.concatenate((q_ind, q_dep, u_ind, u_dep))
+        x = np.concatenate((q_all, u_ind, u_dep))
         ctrl = tuple(cf(0., x) for cf in self._c_funcs)
-        try:
-            eval_config_nb = nb.njit()(self._eval_configuration_constraints)
-            eval_config_nb(q_dep, q_ind, self._p_vals)
-            self._eval_configuration_constraints = eval_config_nb
-        except Exception as e:
-            msg = (f"Could not compile lambdified configuration constraint. "
-                   f"Execution raised the following error:\n{e}")
-            print(msg)  # noqa: T201
-        try:
-            eval_vel_nb = nb.njit()(self._eval_velocity_constraints)
-            eval_vel_nb(u_dep, self.system.q, u_ind, self._p_vals)
-            self._eval_velocity_constraints = eval_vel_nb
-        except Exception as e:
-            msg = (f"Could not compile lambdified velocity constraint. "
-                   f"Execution raised the following error:\n{e}")
-            print(msg)  # noqa: T201
+        if self.system.q_dep:
+            try:
+                eval_config_nb = nb.njit()(self._eval_configuration_constraints)
+                eval_config_nb(q_dep, q_ind, self._p_vals)
+                self._eval_configuration_constraints = eval_config_nb
+            except Exception as e:
+                msg = (f"Could not compile lambdified configuration constraint. "
+                       f"Execution raised the following error:\n{e}")
+                print(msg)  # noqa: T201
+        if self.system.u_dep:
+            try:
+                eval_vel_nb = nb.njit()(self._eval_velocity_constraints)
+                eval_vel_nb(u_dep, q_all, u_ind, self._p_vals)
+                self._eval_velocity_constraints = eval_vel_nb
+            except Exception as e:
+                msg = (f"Could not compile lambdified velocity constraint. "
+                       f"Execution raised the following error:\n{e}")
+                print(msg)  # noqa: T201
         try:
             eval_eoms_nb = nb.njit()(self._eval_eoms_matrices)
             eval_eoms_nb(0., x, self._p_vals, ctrl)
