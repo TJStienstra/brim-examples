@@ -29,7 +29,7 @@ elif results == "simulation":
         [data.simulator.controls[fi](ti, x_arr[:, i]) for i, ti in enumerate(t_arr)]
         for fi in data.controllable_loads])
     du_arr = np.array([
-        data.simulator.eval_rhs(t_arr[i], x_arr[:, i])[-len(data.system.u):]
+        data.simulator.eval_rhs(t_arr[i], x_arr[:, i].flatten())[-len(data.system.u):]
         for i in range(len(t_arr))]).T
 elif results in data:
     t_arr = data[results].time
@@ -123,13 +123,13 @@ for i in range(n_frames):
     plotter.evaluate_system(
         x_arr[:, int(round(i * (len(t_arr) - 1) / (n_frames - 1)))].flatten(), p_vals)
     plotter.plot()
-X, Y = np.meshgrid(np.linspace(-1, 2 * np.pi + 1, 100), np.linspace(-1.5, 1.5, 100))
-ax.plot_wireframe(X, Y, np.zeros_like(X), color="k", alpha=0.3, rstride=10, cstride=10)
+X, Y = np.meshgrid(np.arange(np.pi - 3.6, np.pi + 3.7, 0.3), np.arange(-1.5, 1.6, 0.3))
+ax.plot_wireframe(X, Y, np.zeros_like(X), color="k", alpha=0.3, rstride=1, cstride=1)
 ax.invert_zaxis()
 ax.invert_yaxis()
-ax.set_xlim(-1, 2 * np.pi + 1)
-ax.set_ylim(-1.5, 1.5)
-ax.view_init(18, 18)
+ax.set_xlim(X.min(), X.max())
+ax.set_ylim(Y.min(), Y.max())
+ax.view_init(19, 60)
 ax.set_aspect("equal")
 ax.axis("off")
 
@@ -146,12 +146,14 @@ sol_line, = ax.plot([], [], [], "r", label="Solution")
 plotter.lambdify_system((data.system.q[:] + data.system.u[:], p))
 plotter.evaluate_system(x_arr[:, 0].flatten(), p_vals)
 plotter.plot()
+ax.plot_wireframe(X, Y, np.zeros_like(X), color="k", alpha=0.3, rstride=1, cstride=1)
 ax.invert_zaxis()
 ax.invert_yaxis()
-ax.set_xlim(-1, 8)
-ax.set_ylim(-2, 2)
+ax.set_xlim(X.min(), X.max())
+ax.set_ylim(Y.min(), Y.max())
 ax.view_init(19, 14)
 ax.set_aspect("equal")
+ax.axis("off")
 
 
 def animate(i):
