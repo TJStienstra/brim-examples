@@ -264,7 +264,10 @@ class Simulator:
         self._n_x = self._n_q + self._n_u
         self._p, self._p_vals = zip(*self.constants.items())
         self._p_vals = np.array(self._p_vals, dtype=np.float64)
-        self._c, self._c_funcs = zip(*self.controls.items())
+        if self.controls:
+            self._c, self._c_funcs = zip(*self.controls.items())
+        else:
+            self._c, self._c_funcs = (), ()
         velocity_constraints = msubs(self.system.holonomic_constraints.diff(t).col_join(
             self.system.nonholonomic_constraints), qdot_to_u)
         self._eval_configuration_constraints = lambdify(
