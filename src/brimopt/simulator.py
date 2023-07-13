@@ -28,12 +28,12 @@ class Simulator:
             raise TypeError(
                 f"System should be of type {type(System)} not {type(system)}.")
         self._system = system
-        self._constants = None
-        self._initial_conditions = None
-        self._controls = None
+        self._constants = {}
+        self._initial_conditions = {}
+        self._controls = {}
         self._t, self._x = None, None
-        self._p, self._p_vals = None, None
-        self._c, self._c_funcs = None, None
+        self._p, self._p_vals = (), np.array([], dtype=np.float64)
+        self._c, self._c_funcs = (), ()
         self._eval_configuration_constraints = None
         self._eval_velocity_constraints = None
         self._eval_eoms_matrices = None
