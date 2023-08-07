@@ -120,3 +120,45 @@ class TestSimulator:
         self.simulator.initial_conditions = {}
         assert self.simulator.initial_conditions == {}
         assert not self.simulator._initialized
+
+    def test_initialize_eoms_not_formed(self) -> None:
+        simulator = Simulator(self.system)
+        simulator.constants = self.constants
+        simulator.controls = self.controls
+        simulator.initial_conditions = self.initial_conditions
+        with pytest.raises(ValueError):
+            simulator.initialize()
+
+    @pytest.mark.parametrize("key", ["constants", "controls", "initial_conditions"])
+    def test_initialize_not_set_variable(self, key) -> None:
+        self.system.form_eoms()
+        simulator = Simulator(self.system)
+        for k in ["constants", "controls", "initial_conditions"]:
+            if k != key:
+                setattr(simulator, k, getattr(self, k))
+        with pytest.raises(ValueError):
+            simulator.initialize()
+
+    def test_initialize_missing_constant(self, setup_simulator) -> None:
+        self.simulator.constants.pop(symbols("g"))
+        with pytest.raises(ValueError):
+            self.simulator.initialize()
+
+    def test_initialize_missing_control(self, setup_simulator) -> None:
+        self.simulator.controls.pop(dynamicsymbols("T"))
+        with pytest.raises(ValueError):
+            self.simulator.initialize()
+
+    def test_initialize_missing_initial_condition(self, setup_simulator) -> None:
+        self.simulator.initial_conditions.pop(self.rolling_disc.q[0])
+        with pytest.raises(ValueError):
+            self.simulator.initialize()
+
+    def test_initialize(self, setup_simulator) -> None:
+        assert not self.simulator._initialized
+        self.simulator.initialize()
+        assert self.simulator._initialized
+
+    def test_initialize_no_param_check(self, setup_simulator) -> None:
+        self.simulator.constants.pop(symbols("g"))
+        self.simulator.initialize(False)
