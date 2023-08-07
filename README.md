@@ -1,2 +1,3 @@
-# BRiMOpt
-A Python package to optimize bicycle-rider models created using BRiM.
+# BRiM Examples
+This repository contains several examples how BRiM can be used to solve different
+problems.

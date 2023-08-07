@@ -2,4 +2,7 @@ __pycache__
 .coverage
 docs/_build
 docs/_autosummary
+examples/*/*.gif
+examples/*/*.pkl
 examples/*.gif
+data

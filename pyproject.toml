@@ -1,17 +1,18 @@
 [tool.poetry]
-name = "brimopt"
+name = "brim-examples"
 version = "0.0.1"
-description = "Bicycle rider models optimize tool"
+description = "Examples for the BRIM package."
 authors = ["TJStienstra <T.J.Stienstra@student.tudelft.nl>"]
 license = "CC0-1.0"
 readme = "README.md"
-repository = "https://github.com/TJStienstra/brimopt"
+repository = "https://github.com/TJStienstra/brim-examples"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-brim = {git = "https://github.com/TJStienstra/brim"}
-pycollo = {git = "https://github.com/brocksam/pycollo"}
-symmeplot = {git = "https://github.com/TJStienstra/symmeplot.git", optional = true}
+brim = {git = "https://github.com/TJStienstra/brim.git", branch = "main", extras=["plotting", "parametrize"]}
+pycollo = {git = "https://github.com/brocksam/pycollo.git"}
+cloudpickle = "^2.2.1"
+numba = "^0.57.1"
 
 
 [tool.poetry.group.lint.dependencies]
@@ -20,15 +21,11 @@ ruff = "^0.0.262"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.3.1"
-pytest-cov = "^4.0.0"
 
 
 [tool.poetry.group.docs.dependencies]
 sphinx = "^6.1.3"
 furo = "^2023.3.27"
-
-[tool.poetry.extras]
-plotting = ["symmeplot"]
 
 [build-system]
 requires = ["poetry-core"]
@@ -51,20 +48,4 @@ convention = "numpy"
 [tool.pytest.ini_options]
 testpaths = [
     "tests",
-]
-
-[tool.coverage.paths]
-source = ["src"]
-
-[tool.coverage.run]
-branch = true
-source = ["brimopt"]
-
-[tool.coverage.report]
-show_missing = true
-fail_under = 100
-exclude_lines = [
-    "pragma: no cover",
-    "if __name__ == .__main__.:",
-    "if TYPE_CHECKING:",
 ]
