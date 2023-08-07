@@ -74,23 +74,3 @@ jobs:
         run: |
           poetry run make -C docs clean
           poetry run make -C docs html
-
-    #---------------------------------- code-coverage ---------------------------------#
-
-  code-coverage:
-    needs: tests
-
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install poetry
-        run: pipx install poetry==1.4.0
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.11
-      - name: Install dependencies
-        run: poetry install --with test
-      - name: Run tests with code coverage
-        run: |
-          poetry run pytest --cov
