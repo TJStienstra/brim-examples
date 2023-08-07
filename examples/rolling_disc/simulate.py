@@ -1,8 +1,9 @@
 """Script simulating the rolling disc based on the optimization outcome."""
 
 import cloudpickle
-from brimopt import Simulator
 from scipy.interpolate import CubicSpline
+
+from utilities import Simulator
 
 filename = "data.pkl"
 with open(filename, "rb") as f:

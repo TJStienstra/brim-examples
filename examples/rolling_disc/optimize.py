@@ -5,7 +5,8 @@ import numpy as np
 import pycollo
 import sympy as sm
 import sympy.physics.mechanics as me
-from brimopt import DataStorage
+
+from utilities import DataStorage
 
 with open("data.pkl", "rb") as f:
     data = cloudpickle.load(f)

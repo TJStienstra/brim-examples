@@ -2,10 +2,11 @@ import numpy as np
 import pytest
 from brim import FlatGround, KnifeEdgeWheel, NonHolonomicTyre
 from brim.other import RollingDisc
-from brimopt.simulator import Simulator
 from numpy.testing import assert_allclose
 from sympy import symbols
 from sympy.physics.mechanics import Torque, dynamicsymbols, inertia
+
+from utilities.simulator import Simulator
 
 
 class TestSimulator:

@@ -5,7 +5,8 @@ import sympy as sm
 import sympy.physics.mechanics as me
 from brim import FlatGround, KnifeEdgeWheel, NonHolonomicTyre
 from brim.other import RollingDisc
-from brimopt import DataStorage
+
+from utilities import DataStorage
 
 g = sm.symbols("g")
 t = me.dynamicsymbols._t

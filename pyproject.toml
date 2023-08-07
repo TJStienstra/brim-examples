@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "brimopt"
+name = "brim-examples"
 version = "0.0.1"
-description = "Bicycle rider models optimize tool"
+description = "Examples for the BRIM package."
 authors = ["TJStienstra <T.J.Stienstra@student.tudelft.nl>"]
 license = "CC0-1.0"
 readme = "README.md"
-repository = "https://github.com/TJStienstra/brimopt"
+repository = "https://github.com/TJStienstra/brim-examples"
 
 [tool.poetry.dependencies]
 python = "^3.8"
