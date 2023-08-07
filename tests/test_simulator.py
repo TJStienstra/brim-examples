@@ -187,5 +187,7 @@ class TestSimulator:
         if compile_with_numba:
             self.simulator.compile_with_numba()
         t, x = self.simulator.solve((0, 1))
-        assert self.simulator.t == t
-        assert self.simulator.x == x
+        assert t[0] == 0
+        assert t[-1] == 1
+        assert_allclose(self.simulator.t, t)
+        assert_allclose(self.simulator.x, x)
