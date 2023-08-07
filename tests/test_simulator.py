@@ -3,6 +3,7 @@ import pytest
 from brim import FlatGround, KnifeEdgeWheel, NonHolonomicTyre
 from brim.other import RollingDisc
 from brimopt.simulator import Simulator
+from numpy.testing import assert_allclose
 from sympy import symbols
 from sympy.physics.mechanics import Torque, dynamicsymbols, inertia
 
@@ -162,3 +163,14 @@ class TestSimulator:
     def test_initialize_no_param_check(self, setup_simulator) -> None:
         self.simulator.constants.pop(symbols("g"))
         self.simulator.initialize(False)
+
+    @pytest.mark.parametrize("compile_with_numba", [True, False])
+    def test_eval_rhs(self, setup_simulator, compile_with_numba) -> None:
+        self.simulator.initialize()
+        if compile_with_numba:
+            self.simulator.compile_with_numba()
+        assert_allclose(self.simulator.eval_rhs(0, np.zeros(10)), np.zeros(10))
+        x0 = np.array([self.simulator.initial_conditions[xi]
+                       for xi in self.system.q.col_join(self.system.u)])
+        assert_allclose(self.simulator.eval_rhs(0, x0),
+                        [0.3, 0, 0, 0, -1, 0, 0, 0, 0, 0])

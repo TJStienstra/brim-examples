@@ -163,7 +163,7 @@ class Simulator:
                     self._eval_configuration_constraints)
                 eval_config_nb(q_dep, q_ind, self._p_vals)
                 self._eval_configuration_constraints = eval_config_nb
-            except Exception as e:
+            except Exception as e:  # pragma: no cover
                 msg = (f"Could not compile lambdified configuration constraint. "
                        f"Execution raised the following error:\n{e}")
                 print(msg)  # noqa: T201
@@ -173,7 +173,7 @@ class Simulator:
                     self._eval_velocity_constraints)
                 eval_vel_nb(u_dep, q_all, u_ind, self._p_vals)
                 self._eval_velocity_constraints = eval_vel_nb
-            except Exception as e:
+            except Exception as e:  # pragma: no cover
                 msg = (f"Could not compile lambdified velocity constraint. "
                        f"Execution raised the following error:\n{e}")
                 print(msg)  # noqa: T201
@@ -181,7 +181,7 @@ class Simulator:
             eval_eoms_nb = nb.njit(eoms_signature, **kwargs)(self._eval_eoms_matrices)
             eval_eoms_nb(0., x, self._p_vals, ctrl)
             self._eval_eoms_matrices = eval_eoms_nb
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             msg = (f"Could not compile lambdified equations of motion. "
                    f"Execution raised the following error:\n{e}")
             print(msg)  # noqa: T201
