@@ -96,12 +96,12 @@ class Simulator:
                 raise TypeError(
                     f"Controls should be of type {type(Callable[[float], float])} not "
                     f"{type(control)}.")
-        self._controls = controls
         if self._initialized:
             if set(self.controls.keys()) != set(controls.keys()):
                 self._initialized = False
             else:
                 self._c_funcs = tuple(controls[fi] for fi in self._c)
+        self._controls = controls
 
     @property
     def initial_conditions(self) -> dict[Function, float]:

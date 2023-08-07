@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 from brim import FlatGround, KnifeEdgeWheel, NonHolonomicTyre
 from brim.other import RollingDisc
@@ -82,4 +83,24 @@ class TestSimulator:
         # Test with different keys
         self.simulator.constants = {symbols("g"): 9.81}
         assert self.simulator.constants == {symbols("g"): 9.81}
+        assert not self.simulator._initialized
+
+    def test_set_controls(self, setup_simulator) -> None:
+        torque = dynamicsymbols("T")
+        # Test wrong type
+        with pytest.raises(TypeError):
+            self.simulator.controls = (dynamicsymbols("T"), lambda t, x: 0.0)
+        with pytest.raises(TypeError):
+            self.simulator.controls = {torque: 0.0}
+        assert self.simulator.controls[torque](0, np.zeros(10)) == 0.0
+        # Test changing controls after initialization
+        self.simulator.initialize()
+        assert (self.simulator.eval_rhs(0, np.zeros(10)) ** 2).sum() == 0
+        controls = {torque: lambda t, x: 1.0}
+        self.simulator.controls = controls
+        assert self.simulator.controls[torque](0, np.zeros(10)) == 1.0
+        assert (self.simulator.eval_rhs(0, np.zeros(10)) ** 2).sum() > 0
+        # Test with different keys
+        self.simulator.controls = {}
+        assert self.simulator.controls == {}
         assert not self.simulator._initialized
