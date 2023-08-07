@@ -71,13 +71,14 @@ class Simulator:
         if not isinstance(constants, dict):
             raise TypeError(f"Constants should be of type {type(dict)} not "
                             f"{type(constants)}.")
-        self._constants = constants
         if self._initialized:
             if set(self.constants.keys()) != set(constants.keys()):
                 self._initialized = False
             else:
                 self._p_vals = np.array(
                     [constants[pi] for pi in self._p], dtype=np.float64)
+                self.solve_initial_conditions()
+        self._constants = constants
 
     @property
     def controls(self
