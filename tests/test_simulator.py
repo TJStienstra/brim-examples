@@ -104,3 +104,19 @@ class TestSimulator:
         self.simulator.controls = {}
         assert self.simulator.controls == {}
         assert not self.simulator._initialized
+
+    def test_initial_conditions(self, setup_simulator) -> None:
+        # Test wrong type
+        with pytest.raises(TypeError):
+            self.simulator.initial_conditions = (self.rolling_disc.q[0], 0.0)
+        assert self.simulator.initial_conditions == self.initial_conditions
+        # Test changing initial conditions after initialization
+        self.simulator.initialize()
+        initial_conditions = {**self.initial_conditions, self.rolling_disc.u[4]: -2.0}
+        self.simulator.initial_conditions = initial_conditions
+        assert self.simulator.initial_conditions[self.rolling_disc.u[4]] == -2.0
+        assert self.simulator.initial_conditions[self.rolling_disc.u[0]] == 0.6
+        # Test with different keys
+        self.simulator.initial_conditions = {}
+        assert self.simulator.initial_conditions == {}
+        assert not self.simulator._initialized

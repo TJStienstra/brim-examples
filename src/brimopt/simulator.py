@@ -71,14 +71,15 @@ class Simulator:
         if not isinstance(constants, dict):
             raise TypeError(f"Constants should be of type {type(dict)} not "
                             f"{type(constants)}.")
+        old_constants = self._constants
+        self._constants = constants
         if self._initialized:
-            if set(self.constants.keys()) != set(constants.keys()):
+            if set(old_constants.keys()) != set(constants.keys()):
                 self._initialized = False
             else:
                 self._p_vals = np.array(
                     [constants[pi] for pi in self._p], dtype=np.float64)
                 self.solve_initial_conditions()
-        self._constants = constants
 
     @property
     def controls(self
@@ -96,12 +97,13 @@ class Simulator:
                 raise TypeError(
                     f"Controls should be of type {type(Callable[[float], float])} not "
                     f"{type(control)}.")
+        old_controls = self._controls
+        self._controls = controls
         if self._initialized:
-            if set(self.controls.keys()) != set(controls.keys()):
+            if set(old_controls.keys()) != set(controls.keys()):
                 self._initialized = False
             else:
                 self._c_funcs = tuple(controls[fi] for fi in self._c)
-        self._controls = controls
 
     @property
     def initial_conditions(self) -> dict[Function, float]:
@@ -113,9 +115,13 @@ class Simulator:
         if not isinstance(initial_conditions, dict):
             raise TypeError(f"Initial condintions should be of type "
                             f"{type(dict)} not {type(initial_conditions)}.")
+        old_initial_conditions = self._initial_conditions
         self._initial_conditions = initial_conditions
         if self._initialized:
-            self.solve_initial_conditions()
+            if set(old_initial_conditions.keys()) != set(initial_conditions.keys()):
+                self._initialized = False
+            else:
+                self.solve_initial_conditions()
 
     def _eval_eoms_reshaped(
             self, t: float, x: npt.NDArray[np.float64]
@@ -335,7 +341,7 @@ class Simulator:
             sol = solve_ivp(self.eval_rhs, t_span, x0, **kwargs)
             self._t = sol.t
             self._x = sol.y
-        elif solver == "dae":
+        elif solver == "dae":  # pragma: no cover
             from scikits.odes import dae
             integrator_name = kwargs.pop("integrator_name", "ida")
             n_constrs = len(self.system.holonomic_constraints) + len(
