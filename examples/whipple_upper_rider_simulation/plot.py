@@ -32,7 +32,7 @@ def eval_eoms_reshaped(x, du, p, c):
     return mass_matrix.reshape((len(x), len(x))), forcing.reshape((len(x),))
 
 
-make_animation = False
+make_animation = True
 
 t_arr = data.simulator.t
 x_arr = data.simulator.x

@@ -21,4 +21,6 @@ the side lean equals the opposite of the roll angle of the bicycle, such that th
 stays upright. As for the shoulder and elbow flexion, those are controlled such that
 they steer the bicycle towards the falling direction.
 
+![](./animation.gif)
+
 [Moore's parametrization convention]: http://moorepants.github.io/dissertation/eom.html
