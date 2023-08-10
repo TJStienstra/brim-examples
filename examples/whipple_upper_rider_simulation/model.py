@@ -75,7 +75,7 @@ br.define_constraints()
 system = br.to_system()
 
 g = symbols("g")
-system.apply_gravity(-g * bicycle.ground.get_normal(()))
+system.apply_gravity(-g * bicycle.ground.get_normal(bicycle.ground.origin))
 
 # The dependent and independent variables need to be specified manually
 system.q_ind = [

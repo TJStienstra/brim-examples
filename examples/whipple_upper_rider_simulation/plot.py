@@ -32,7 +32,7 @@ def eval_eoms_reshaped(x, du, p, c):
     return mass_matrix.reshape((len(x), len(x))), forcing.reshape((len(x),))
 
 
-make_animation = False
+make_animation = True
 
 t_arr = data.simulator.t
 x_arr = data.simulator.x
@@ -64,6 +64,11 @@ c = data.controllable_loads
 loads = {loc: sm.lambdify((x, p, c), load)(x_arr, p_vals, c_arr)
          for loc, load in loads.items()}
 x_eval = CubicSpline(t_arr, x_arr.T)
+
+constraints = data.system.holonomic_constraints.col_join(
+    data.system.nonholonomic_constraints).xreplace(data.system.eom_method.kindiffdict())
+eval_constraints = sm.lambdify((data.x, p), constraints, cse=True)
+constr_arr = eval_constraints(x_arr, p_vals).reshape((len(constraints), len(t_arr)))
 
 plt.figure()
 for name, load_arr in loads.items():
@@ -166,16 +171,23 @@ plt.xlabel("Time (s)")
 plt.ylabel("Angle difference (rad)")
 plt.legend()
 
+plt.figure()
+for i in range(len(constraints)):
+    plt.plot(t_arr, constr_arr[i, :], label=f"{i}")
+plt.xlabel("Time (s)")
+plt.ylabel("Constraint violation")
+plt.legend()
+
 p, p_vals = zip(*data.constants.items())
-fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(12, 12))
-n_frames = 7
+fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(10, 10))
+n_frames = 8
 plotter = Plotter.from_model(ax, data.model)
 plotter.lambdify_system((data.system.q[:] + data.system.u[:], p))
-plotter.evaluate_system(x_arr[:, 0].flatten(), p_vals)
 for plot_object in plotter.plot_objects:
     if isinstance(plot_object, PlotBody):
         plot_object.plot_frame.visible = False
         plot_object.plot_masscenter.visible = False
+plotter.evaluate_system(x_arr[:, 0].flatten(), p_vals)
 for i in range(n_frames):
     for artist in plotter.artists:
         artist.set_alpha(i * 1 / (n_frames + 1) + 1 / n_frames)
@@ -183,6 +195,9 @@ for i in range(n_frames):
     plotter.evaluate_system(
         x_arr[:, int(round(i * (len(t_arr) - 1) / (n_frames - 1)))].flatten(), p_vals)
     plotter.update()
+for artist in plotter.artists:
+    artist.set_alpha(1)
+    ax.add_artist(copy(artist))
 q1_arr = x_arr[data.system.q[:].index(data.model.bicycle.q[0]), :]
 q2_arr = x_arr[data.system.q[:].index(data.model.bicycle.q[1]), :]
 q1_lim, q2_lim = (q1_arr.min(), q1_arr.max()), (q2_arr.min(), q2_arr.max())

@@ -201,7 +201,6 @@ mul_shoulder, mul_elbow = 1.0, 1.0
 controls = {
     lean_torque.symbols["q_ref"]: lambda t, x: -1.0 * x[roll_idx],
     left_shoulder_torque.symbols["q_ref_flexion"]:
-        # lambda t, x: x[left_shoulder_idx] + mul_shoulder * x[roll_idx],
         lambda t, x: initial_conditions[rider.left_shoulder.q[0]] +
                      mul_shoulder * x[roll_idx],
     left_shoulder_torque.symbols["q_ref_adduction"]:
@@ -209,7 +208,6 @@ controls = {
     left_shoulder_torque.symbols["q_ref_rotation"]:
         lambda t, x: initial_conditions[rider.left_shoulder.q[2]],
     right_shoulder_torque.symbols["q_ref_flexion"]:
-        # lambda t, x: x[right_shoulder_idx] - mul_shoulder * x[roll_idx],
         lambda t, x: initial_conditions[rider.right_shoulder.q[0]] -
                      mul_shoulder * x[roll_idx],
     right_shoulder_torque.symbols["q_ref_adduction"]:
@@ -217,13 +215,10 @@ controls = {
     right_shoulder_torque.symbols["q_ref_rotation"]:
         lambda t, x: initial_conditions[rider.right_shoulder.q[2]],
     left_arm_torque.symbols["q_ref"]:
-        # lambda t, x: x[left_elbow_idx] + mul_elbow * x[roll_idx],
         lambda t, x: initial_conditions[rider.left_arm.q[0]] - mul_elbow * x[roll_idx],
     right_arm_torque.symbols["q_ref"]:
-        # lambda t, x: x[right_elbow_idx] - mul_elbow * x[roll_idx],
         lambda t, x: initial_conditions[rider.right_arm.q[0]] + mul_elbow * x[roll_idx],
 }
-# controls = {k: lambda t, x: 1 for k, v in controls.items()}
 for control in controls:
     constants.pop(control)
 assert set(constants.keys()).isdisjoint(controls.keys())
