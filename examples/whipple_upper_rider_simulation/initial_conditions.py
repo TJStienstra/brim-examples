@@ -141,7 +141,7 @@ initial_conditions = {
     bicycle.u[2]: 0,
     bicycle.u[3]: 0,
     bicycle.u[4]: 0,
-    bicycle.u[5]: -10,
+    bicycle.u[5]: -3 / constants[bicycle.rear_wheel.radius],
     bicycle.u[6]: 0,
     bicycle.u[7]: 0,
     rider.left_arm.u[0]: 0,
@@ -192,32 +192,33 @@ u0 = np.concatenate((u0_ind, u0_dep))
 initial_conditions.update(dict(zip(system.q, q0)))
 initial_conditions.update(dict(zip(system.u, u0)))
 
-roll_idx = system.q[:].index(bicycle.q[3])
+roll_rate_idx = len(system.q) + system.u[:].index(bicycle.u[3])
 left_shoulder_idx = system.q[:].index(rider.left_shoulder.q[0])
 right_shoulder_idx = system.q[:].index(rider.right_shoulder.q[0])
 left_elbow_idx = system.q[:].index(rider.left_arm.q[0])
 right_elbow_idx = system.q[:].index(rider.right_arm.q[0])
-mul_shoulder, mul_elbow = 1.0, 1.0
+max_roll_rate = 0.2
+excitation = lambda t, x: min(x[roll_rate_idx] / max_roll_rate, 1.0)  # noqa: E731
+
 controls = {
-    lean_torque.symbols["q_ref"]: lambda t, x: -1.0 * x[roll_idx],
+    lean_torque.symbols["q_ref"]:
+        lambda t, x: -excitation(t, x),
     left_shoulder_torque.symbols["q_ref_flexion"]:
-        lambda t, x: initial_conditions[rider.left_shoulder.q[0]] +
-                     mul_shoulder * x[roll_idx],
+        lambda t, x: initial_conditions[rider.left_shoulder.q[0]] + excitation(t, x),
     left_shoulder_torque.symbols["q_ref_adduction"]:
         lambda t, x: initial_conditions[rider.left_shoulder.q[1]],
     left_shoulder_torque.symbols["q_ref_rotation"]:
         lambda t, x: initial_conditions[rider.left_shoulder.q[2]],
     right_shoulder_torque.symbols["q_ref_flexion"]:
-        lambda t, x: initial_conditions[rider.right_shoulder.q[0]] -
-                     mul_shoulder * x[roll_idx],
+        lambda t, x: initial_conditions[rider.right_shoulder.q[0]] - excitation(t, x),
     right_shoulder_torque.symbols["q_ref_adduction"]:
         lambda t, x: initial_conditions[rider.right_shoulder.q[1]],
     right_shoulder_torque.symbols["q_ref_rotation"]:
         lambda t, x: initial_conditions[rider.right_shoulder.q[2]],
     left_arm_torque.symbols["q_ref"]:
-        lambda t, x: initial_conditions[rider.left_arm.q[0]] - mul_elbow * x[roll_idx],
+        lambda t, x: initial_conditions[rider.left_arm.q[0]] - excitation(t, x),
     right_arm_torque.symbols["q_ref"]:
-        lambda t, x: initial_conditions[rider.right_arm.q[0]] + mul_elbow * x[roll_idx],
+        lambda t, x: initial_conditions[rider.right_arm.q[0]] + excitation(t, x),
 }
 for control in controls:
     constants.pop(control)
