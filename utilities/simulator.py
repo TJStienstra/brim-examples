@@ -332,6 +332,12 @@ class Simulator:
             The solver to use, by default "solve_ivp".
         **kwargs
             Keyword arguments to pass to `scipy.integrate.solve_ivp`.
+
+        Returns
+        -------
+        tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]
+            The times and the solution of the system, where the solution has the shape
+            ``(n_x, n_t)``.
         """
         if not self._initialized:
             raise RuntimeError("Simulator has not been initialized yet.")
@@ -352,7 +358,7 @@ class Simulator:
                 **kwargs)
             sol = dae_solver.solve(t_span, x0, self.eval_rhs(t_span[0], x0))
             self._t = sol.values.t
-            self._x = sol.values.y
+            self._x = sol.values.y.T
         else:
             raise ValueError(f"Unknown solver {solver}.")
         return self.t, self.x
