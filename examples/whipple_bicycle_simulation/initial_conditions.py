@@ -16,7 +16,6 @@ bicycle = data.model
 steer_torque = data.controllable_loads[0]
 
 bike_params = bp.Bicycle("Browser", pathToData=data_dir)
-bike_params.parameters.pop("Benchmark")
 constants = bicycle.get_param_values(bike_params)
 constants.update({
     symbols("g"): 9.81,

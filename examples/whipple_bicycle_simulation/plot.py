@@ -144,7 +144,7 @@ if not make_animation:
     plt.show()
     exit()
 
-fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(13, 13))
+fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(10, 10))
 plotter = Plotter.from_model(ax, data.model)
 plotter.lambdify_system((data.system.q[:] + data.system.u[:], p))
 plotter.evaluate_system(x_arr[:, 0].flatten(), p_vals)

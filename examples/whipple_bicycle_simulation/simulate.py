@@ -14,6 +14,7 @@ if "simulator" in data and True:
     simulator.constants = data.constants
     simulator.initial_conditions = data.initial_conditions
     simulator.controls = data.controls
+    simulator.solve_initial_conditions()
 else:
     simulator = Simulator(data.system)
     simulator.constants = data.constants
