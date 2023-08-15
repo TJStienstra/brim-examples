@@ -21,12 +21,13 @@ disc.define_all()
 system = disc.to_system()
 normal = disc.ground.get_normal(disc.ground.origin)
 system.apply_gravity(-g * normal)
-r_up = disc.disc.body.masscenter.pos_from(disc.tyre.contact_point).normalize()
 r_long = me.cross(normal, disc.disc.rotation_axis).normalize()
 system.add_loads(
     me.Torque(
         disc.disc.frame,
-        T_drive * disc.disc.rotation_axis + T_steer * r_up + T_roll * r_long))
+        T_drive * disc.disc.rotation_axis +
+        T_steer * disc.tyre.upward_radial_axis +
+        T_roll * r_long))
 system.u_ind = disc.u[2:]
 system.u_dep = disc.u[:2]
 system.form_eoms()

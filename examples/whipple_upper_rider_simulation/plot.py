@@ -172,6 +172,14 @@ plt.ylabel("Angle difference (rad)")
 plt.legend()
 
 plt.figure()
+u1_arr = x_arr[len(data.system.q) + data.system.u[:].index(data.model.bicycle.u[0]), :]
+u2_arr = x_arr[len(data.system.q) + data.system.u[:].index(data.model.bicycle.u[1]), :]
+plt.plot(t_arr, np.sqrt(u1_arr ** 2 + u2_arr ** 2).flatten())
+plt.title("Forward velocity rear wheel")
+plt.xlabel("Time (s)")
+plt.ylabel("Velocity (m/s)")
+
+plt.figure()
 for i in range(len(constraints)):
     plt.plot(t_arr, constr_arr[i, :], label=f"{i}")
 plt.xlabel("Time (s)")
@@ -180,7 +188,7 @@ plt.legend()
 
 p, p_vals = zip(*data.constants.items())
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(10, 10))
-n_frames = 8
+n_frames = 6
 plotter = Plotter.from_model(ax, data.model)
 plotter.lambdify_system((data.system.q[:] + data.system.u[:], p))
 for plot_object in plotter.plot_objects:
@@ -200,15 +208,21 @@ for artist in plotter.artists:
     ax.add_artist(copy(artist))
 q1_arr = x_arr[data.system.q[:].index(data.model.bicycle.q[0]), :]
 q2_arr = x_arr[data.system.q[:].index(data.model.bicycle.q[1]), :]
-q1_lim, q2_lim = (q1_arr.min(), q1_arr.max()), (q2_arr.min(), q2_arr.max())
-X, Y = np.meshgrid(np.arange(q1_lim[0] - 1, q1_lim[1] + 1, 0.5),
-                   np.arange(q2_lim[0] - 1, q2_lim[1] + 1, 0.5))
+front_contact_coord = data.model.bicycle.front_tyre.contact_point.pos_from(
+    plotter.origin).to_matrix(plotter.inertial_frame)[:2]
+eval_fc = sm.lambdify((data.system.q[:] + data.system.u[:], p),
+                      front_contact_coord, cse=True)
+fc_arr = np.array(eval_fc(x_arr, p_vals))
+x_lim = min((fc_arr[0, :].min(), q1_arr.min())), max((fc_arr[0, :].max(), q1_arr.max()))
+y_lim = min((fc_arr[1, :].min(), q2_arr.min())), max((fc_arr[1, :].max(), q2_arr.max()))
+X, Y = np.meshgrid(np.arange(x_lim[0] - 1, x_lim[1] + 1, 0.5),
+                   np.arange(y_lim[0] - 1, y_lim[1] + 1, 0.5))
 ax.plot_wireframe(X, Y, np.zeros_like(X), color="k", alpha=0.3, rstride=1, cstride=1)
 ax.invert_zaxis()
 ax.invert_yaxis()
 ax.set_xlim(X.min(), X.max())
 ax.set_ylim(Y.min(), Y.max())
-ax.view_init(30, -55)
+ax.view_init(25, 15)
 ax.set_aspect("equal")
 ax.axis("off")
 
@@ -221,8 +235,8 @@ plotter = Plotter.from_model(ax, data.model)
 plotter.lambdify_system((data.system.q[:] + data.system.u[:], p))
 plotter.evaluate_system(x_arr[:, 0].flatten(), p_vals)
 plotter.plot()
-X, Y = np.meshgrid(np.arange(q1_lim[0] - 1, q1_lim[1] + 1, 0.5),
-                   np.arange(q2_lim[0] - 1, q2_lim[1] + 1, 0.5))
+X, Y = np.meshgrid(np.arange(x_lim[0] - 1, x_lim[1] + 1, 0.5),
+                   np.arange(y_lim[0] - 1, y_lim[1] + 1, 0.5))
 ax.plot_wireframe(X, Y, np.zeros_like(X), color="k", alpha=0.3, rstride=1, cstride=1)
 ax.invert_zaxis()
 ax.invert_yaxis()
