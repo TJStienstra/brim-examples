@@ -100,7 +100,7 @@ plotting = ["symmeplot @ git+https://github.com/TJStienstra/symmeplot.git"]
 type = "git"
 url = "https://github.com/TJStienstra/brim.git"
 reference = "main"
-resolved_reference = "5f8bc01cc8da8157375816089e54ea2a8d3c7125"
+resolved_reference = "0f95674059dac50b5b9a6194fd8bb76f154901b5"
 
 [[package]]
 name = "casadi"
@@ -1569,7 +1569,7 @@ mpmath = ">=0.19"
 type = "git"
 url = "https://github.com/sympy/sympy.git"
 reference = "HEAD"
-resolved_reference = "b7be6b470c839211863811dd6759d8ff452cb908"
+resolved_reference = "77010f3b6421492d5eff387a86d2801ee77e8be6"
 
 [[package]]
 name = "tenacity"
