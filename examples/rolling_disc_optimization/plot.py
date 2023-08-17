@@ -11,7 +11,7 @@ with open("data.pkl", "rb") as f:
     data = cloudpickle.load(f)
 
 
-results = "simulation"  # "optimization" or "simulation"
+results = "optimization"  # "optimization" or "simulation"
 make_animation = True
 
 if results == "optimization":
@@ -62,16 +62,15 @@ print("Mean tracking error:", abs(  # noqa: T201
     sm.lambdify(data.system.q[:2], data.path)(x_arr[0, :], x_arr[1, :])).mean())
 
 fig, axs = plt.subplots(2, 1, sharex=True)
-axs[0].plot(q1_path, q2_path, color="#000000", label="Target")
-axs[0].plot(q1_arr, q2_arr, label="Solution")
-axs[0].legend()
-axs[0].set_ylabel("q2 (m)")
-axs[0].set_aspect("equal", adjustable="box")
 for i, state in enumerate(data.system.q[2:-1], start=2):
-    axs[1].plot(q1_arr, x_arr[i], label=f"{state.name}")
+    axs[0].plot(q1_arr, x_arr[i], label=f"{state.name[-state.name[::-1].find('_'):]}")
+axs[0].set_ylabel("Angle (rad)")
+axs[0].legend()
+for i, state in enumerate(data.system.u[:3], start=len(data.system.q)):
+    axs[1].plot(q1_arr, x_arr[i], label=f"{state.name[-state.name[::-1].find('_'):]}")
+axs[1].set_ylabel("Angular velocity (rad/s)")
 axs[1].set_xlabel("q1 (m)")
-axs[1].set_ylabel("Angle (rad)")
-axs[1].legend()
+axs[1].legend(loc="lower right")
 
 plt.figure()
 plt.plot(q1_path, q2_path, color="#000000", label="Target")
@@ -86,13 +85,6 @@ for i, load in enumerate(data.controllable_loads):
     plt.plot(q1_arr, c_arr[i], label=f"{load.name}")
 plt.xlabel("q1 (m)")
 plt.ylabel("Torque (Nm)")
-plt.legend()
-
-plt.figure()
-for i, state in enumerate(data.system.q[2:], start=2):
-    plt.plot(q1_arr, x_arr[i], label=f"{state.name}")
-plt.xlabel("q1 (m)")
-plt.ylabel("Angle (rad)")
 plt.legend()
 
 plt.figure()
