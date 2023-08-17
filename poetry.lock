@@ -95,7 +95,7 @@ plotting = ["symmeplot @ git+https://github.com/TJStienstra/symmeplot.git"]
 type = "git"
 url = "https://github.com/TJStienstra/brim.git"
 reference = "main"
-resolved_reference = "0f95674059dac50b5b9a6194fd8bb76f154901b5"
+resolved_reference = "616c68e20a9ccf6cfe60b805d1cc44518c9a353d"
 
 [[package]]
 name = "casadi"
