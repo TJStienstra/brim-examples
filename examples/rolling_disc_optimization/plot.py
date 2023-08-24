@@ -1,11 +1,14 @@
 """Script plotting the results of the rolling disc."""
 
+from copy import copy
+
 import cloudpickle
 import matplotlib.pyplot as plt
 import numpy as np
 import sympy as sm
 from brim.utilities.plotting import Plotter
 from matplotlib.animation import FuncAnimation
+from scipy.interpolate import CubicSpline
 
 with open("data.pkl", "rb") as f:
     data = cloudpickle.load(f)
@@ -39,6 +42,8 @@ elif results in data:
 else:
     raise ValueError("Invalid results type")
 
+x_eval = CubicSpline(t_arr, x_arr.T)
+
 constraints = data.system.holonomic_constraints.col_join(
     data.system.nonholonomic_constraints).xreplace(data.system.eom_method.kindiffdict())
 p, p_vals = zip(*data.constants.items())
@@ -61,24 +66,22 @@ q2_arr = x_arr[1, :]
 print("Mean tracking error:", abs(  # noqa: T201
     sm.lambdify(data.system.q[:2], data.path)(x_arr[0, :], x_arr[1, :])).mean())
 
-fig, axs = plt.subplots(2, 1, sharex=True)
-for i, state in enumerate(data.system.q[2:-1], start=2):
-    axs[0].plot(q1_arr, x_arr[i], label=f"{state.name[-state.name[::-1].find('_'):]}")
-axs[0].set_ylabel("Angle (rad)")
+fig, axs = plt.subplots(3, 1, sharex=True, gridspec_kw={"height_ratios": [1.2, 1, 1]},
+                        figsize=(6.4, 6.4))
+axs[0].plot(q1_path, q2_path, color="k", label="Target")
+axs[0].plot(q1_arr, q2_arr, label="Solution")
+axs[0].set_ylabel("q2 (m)")
 axs[0].legend()
-for i, state in enumerate(data.system.u[:3], start=len(data.system.q)):
+axs[0].set_aspect("equal", adjustable="box")
+for i, state in enumerate(data.system.q[2:-1], start=2):
     axs[1].plot(q1_arr, x_arr[i], label=f"{state.name[-state.name[::-1].find('_'):]}")
-axs[1].set_ylabel("Angular velocity (rad/s)")
-axs[1].set_xlabel("q1 (m)")
-axs[1].legend(loc="lower right")
-
-plt.figure()
-plt.plot(q1_path, q2_path, color="#000000", label="Target")
-plt.plot(q1_arr, q2_arr, label="Solution")
-plt.legend()
-plt.xlabel("q1 (m)")
-plt.ylabel("q2 (m)")
-plt.gca().set_aspect("equal", adjustable="box")
+axs[1].set_ylabel("Angle (rad)")
+axs[1].legend()
+for i, state in enumerate(data.system.u[:3], start=len(data.system.q)):
+    axs[2].plot(q1_arr, x_arr[i], label=f"{state.name[-state.name[::-1].find('_'):]}")
+axs[2].set_ylabel("Angular velocity (rad/s)")
+axs[2].set_xlabel("q1 (m)")
+axs[2].legend(loc="lower right")
 
 plt.figure()
 for i, load in enumerate(data.controllable_loads):
@@ -102,19 +105,22 @@ plt.ylabel("EoM violation")
 plt.legend()
 
 p, p_vals = zip(*data.constants.items())
-fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(15, 15))
+fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(10, 10))
 ax.plot(q1_path, q2_path, np.zeros_like(q1_path), "k", label="Target")
 ax.plot(q1_arr, q2_arr, np.zeros_like(q1_arr), "r", label="Solution")
 n_frames = 10
+plotter = Plotter.from_model(ax, data.model)
+plotter.add_point(data.model.tyre.contact_point, color="r")
+plotter.lambdify_system((data.system.q[:] + data.system.u[:], p))
 for i in range(n_frames):
-    plotter = Plotter.from_model(ax, data.model)
-    plotter.add_point(data.model.tyre.contact_point, color="r")
-    plotter.lambdify_system((data.system.q[:] + data.system.u[:], p))
     for artist in plotter.artists:
         artist.set_alpha(i * 1 / (n_frames + 1) + 1 / n_frames)
-    plotter.evaluate_system(
-        x_arr[:, int(round(i * (len(t_arr) - 1) / (n_frames - 1)))].flatten(), p_vals)
+        ax.add_artist(copy(artist))
+    plotter.evaluate_system(x_eval(i / (n_frames - 1) * t_arr[-1]), p_vals)
     plotter.plot()
+for artist in plotter.artists:
+    artist.set_alpha(1)
+    ax.add_artist(copy(artist))
 X, Y = np.meshgrid(np.arange(np.pi - 3.6, np.pi + 3.7, 0.3), np.arange(-1.5, 1.6, 0.3))
 ax.plot_wireframe(X, Y, np.zeros_like(X), color="k", alpha=0.3, rstride=1, cstride=1)
 ax.invert_zaxis()
@@ -129,7 +135,7 @@ if not make_animation:
     plt.show()
     exit()
 
-fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(15, 15))
+fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(10, 10))
 ax.plot(q1_path, q2_path, np.zeros_like(q1_path), "k", label="Target")
 plotter = Plotter.from_model(ax, data.model)
 cp = plotter.add_point(data.model.tyre.contact_point, color="r")
@@ -148,16 +154,18 @@ ax.set_aspect("equal")
 ax.axis("off")
 
 
-def animate(i):
+def animate(fi):
     """Update the plot for frame i."""
-    if i == 0:
+    if fi == 0:
         sol_line.set_data_3d([], [], [])
-    plotter.evaluate_system(x_arr[:, i], p_vals)
+    plotter.evaluate_system(x_eval(fi / (n_frames - 1) * t_arr[-1]), p_vals)
     sol_line.set_data_3d(*(
         np.append(dat, val) for dat, val in zip(sol_line._verts3d, cp.values[0][0])))
     return *plotter.update(), sol_line,
 
-ani = FuncAnimation(fig, animate, frames=range(len(t_arr)),
-                    interval=1000 * (t_arr[1] - t_arr[0]), blit=False)
-ani.save("animation.gif", dpi=150, fps=int(round(len(t_arr) / t_arr[-1])) + 1)
+
+fps = 30
+n_frames = int(fps * t_arr[-1])
+ani = FuncAnimation(fig, animate, frames=n_frames, blit=False)
+ani.save("animation.gif", dpi=150, fps=fps)
 plt.show()
