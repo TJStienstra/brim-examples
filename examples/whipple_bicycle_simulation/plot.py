@@ -12,30 +12,11 @@ from symmeplot import PlotBody
 
 with open("data.pkl", "rb") as f:
     data = cloudpickle.load(f)
-from sympy.physics.mechanics import dynamicsymbols
-
-data["x"] = data.system.q.col_join(data.system.u)
-data["du"] = sm.Matrix([dynamicsymbols(f"d{ui.name}") for ui in data.system.u])
-data["eoms"] = data.system.mass_matrix * data.du - data.system.forcing
-eval_funcs = [data.simulator._eval_configuration_constraints,
-              data.simulator._eval_velocity_constraints,
-              data.simulator._eval_eoms_matrices]
-for i, f in enumerate(eval_funcs):
-    if hasattr(f, "py_func"):
-        eval_funcs[i] = f.py_func
-eval_conf, eval_vel, eval_eoms = eval_funcs
-
-
-def eval_eoms_reshaped(x, du, p, c):
-    """Evaluate the equations of motion and reshape the result."""
-    mass_matrix, forcing = eval_eoms(x, du, p, c)
-    return mass_matrix.reshape((len(x), len(x))), forcing.reshape((len(x),))
-
 
 make_animation = True
 
 t_arr = data.simulator.t
-x_arr = data.simulator.x.reshape((len(data.system.q) + len(data.system.u), len(t_arr)))
+x_arr = data.simulator.x
 c_arr = np.array([[data.simulator.controls[fi](ti, x_arr[:, i])
                    for i, ti in enumerate(t_arr)] for fi in data.controllable_loads])
 
@@ -45,52 +26,51 @@ x = data.system.q[:] + data.system.u[:]
 c = data.controllable_loads
 loads = {
     "steer_torque": c_arr[c.index(data.controllable_loads[0]), :],
+    "disturbance": c_arr[c.index(data.controllable_loads[1]), :],
 }
 x_eval = CubicSpline(t_arr, x_arr.T)
+c_eval = CubicSpline(t_arr, c_arr.T)
 
 constraints = data.system.holonomic_constraints.col_join(
     data.system.nonholonomic_constraints).xreplace(data.system.eom_method.kindiffdict())
-eval_constraints = sm.lambdify((data.x, p), constraints, cse=True)
+eval_constraints = sm.lambdify((x, p), constraints, cse=True)
 constr_arr = eval_constraints(x_arr, p_vals).reshape((len(constraints), len(t_arr)))
 
-plt.figure()
-for name, load_arr in loads.items():
-    plt.plot(t_arr, load_arr, label=name)
-plt.xlabel("Time (s)")
-plt.ylabel("Torque (Nm)")
-plt.legend()
-
-plt.figure()
-qs = {
-    "yaw": data.model.q[2],
-    "roll": data.model.q[3],
-    "steer": data.model.q[6],
-}
-for q_name, q in qs.items():
-    plt.plot(t_arr, x_arr[data.system.q[:].index(q), :].flatten(), label=q_name)
-
-plt.xlabel("Time (s)")
-plt.ylabel("Angle (rad)")
-plt.legend()
-
-plt.figure()
-us = {
-    "yaw": data.model.u[2],
-    "roll": data.model.u[3],
-    "steer": data.model.u[6],
-}
-for u_name, u in us.items():
-    plt.plot(t_arr, x_arr[len(data.system.q) + data.system.u[:].index(u), :].flatten(),
-             label=u_name)
-
-plt.xlabel("Time (s)")
-plt.ylabel("Anglular velocity (rad/s)")
-plt.legend()
+qs = {"yaw": data.model.q[2], "roll": data.model.q[3], "steer": data.model.q[6]}
+us = {"yaw": data.model.u[2], "roll": data.model.u[3], "steer": data.model.u[6]}
+get_q = lambda q_name: x_arr[data.system.q[:].index(qs[q_name]), :]  # noqa: E731
+get_u = lambda u_name: x_arr[len(data.system.q) +   # noqa: E731
+                             data.system.u[:].index(us[u_name]), :]
+fig, axs = plt.subplots(3, 1, sharex=True, figsize=(6, 7))
+ax0twin, ax1twin, ax2twin = axs[0].twinx(), axs[1].twinx(), axs[2].twinx()
+axs[0].plot(t_arr, loads["disturbance"], color="C0")
+axs[0].set_ylabel("Disturbance force (N)", color="C0")
+axs[0].tick_params(axis="y", labelcolor="C0")
+ax0twin.plot(t_arr, loads["steer_torque"], color="C1")
+ax0twin.set_ylabel("Steer torque (Nm)", color="C1")
+ax0twin.tick_params(axis="y", labelcolor="C1")
+axs[1].plot(t_arr, get_q("yaw"), label="yaw", color="C0")
+axs[1].plot(t_arr, get_q("steer"), label="steer", color="C2")
+ax1twin.plot(t_arr, get_q("roll"), label="roll", color="C1")
+axs[1].set_ylabel("Angle (rad)")
+ax1twin.set_ylabel("Angle (rad)", color="C1")
+ax1twin.tick_params(axis="y", labelcolor="C1")
+ax1twin.legend([plt.Line2D([0], [0], color=f"C{i}") for i in range(3)],
+               ["yaw", "roll", "steer"])
+axs[2].plot(t_arr, get_u("yaw"), label="yaw", color="C0")
+axs[2].plot(t_arr, get_u("steer"), label="steer", color="C2")
+ax2twin.plot(t_arr, get_u("roll"), label="roll", color="C1")
+axs[2].set_ylabel("Angular velocity (rad/s)")
+ax2twin.set_ylabel("Angular velocity (rad/s)", color="C1")
+ax2twin.tick_params(axis="y", labelcolor="C1")
+ax2twin.legend([plt.Line2D([0], [0], color=f"C{i}") for i in range(3)],
+               ["yaw", "roll", "steer"])
+fig.tight_layout()
 
 plt.figure()
 u1_arr = x_arr[len(data.system.q) + data.system.u[:].index(data.model.u[0]), :]
 u2_arr = x_arr[len(data.system.q) + data.system.u[:].index(data.model.u[1]), :]
-plt.plot(t_arr, np.sqrt(u1_arr ** 2 + u2_arr ** 2).flatten())
+plt.plot(t_arr, np.sqrt(u1_arr ** 2 + u2_arr ** 2))
 plt.xlabel("Time (s)")
 plt.ylabel("Forward velocity (m/s)")
 
@@ -101,21 +81,26 @@ plt.xlabel("Time (s)")
 plt.ylabel("Constraint violation")
 plt.legend()
 
+disturbance_plot_info = {"vector": c[1] / c_arr[1, :].max() * data.model.rear_frame.y,
+                         "origin": data.model.rear_frame.saddle,
+                         "name": "disturbance", "color": "r"}
 p, p_vals = zip(*data.constants.items())
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(10, 10))
 n_frames = 6
 plotter = Plotter.from_model(ax, data.model)
-plotter.lambdify_system((data.system.q[:] + data.system.u[:], p))
+# plotter.add_vector(**disturbance_plot_info)  # Is not copy compatible.
+plotter.lambdify_system((data.system.q[:] + data.system.u[:], c, p))
 for plot_object in plotter.plot_objects:
     if isinstance(plot_object, PlotBody):
         plot_object.plot_frame.visible = False
         plot_object.plot_masscenter.visible = False
-plotter.evaluate_system(x_arr[:, 0].flatten(), p_vals)
+plotter.evaluate_system(x_arr[:, 0], c_arr[:, 0], p_vals)
 for i in range(n_frames):
     for artist in plotter.artists:
         artist.set_alpha(i * 1 / (n_frames + 1) + 1 / n_frames)
         ax.add_artist(copy(artist))
-    plotter.evaluate_system(x_eval(i / (n_frames - 1) * t_arr[-1]), p_vals)
+    time = i / (n_frames - 1) * t_arr[-1]
+    plotter.evaluate_system(x_eval(time), c_eval(time), p_vals)
     plotter.update()
 for artist in plotter.artists:
     artist.set_alpha(1)
@@ -124,8 +109,8 @@ q1_arr = x_arr[data.system.q[:].index(data.model.q[0]), :]
 q2_arr = x_arr[data.system.q[:].index(data.model.q[1]), :]
 front_contact_coord = data.model.front_tyre.contact_point.pos_from(
     plotter.origin).to_matrix(plotter.inertial_frame)[:2]
-eval_fc = sm.lambdify((data.system.q[:] + data.system.u[:], p),
-                      front_contact_coord, cse=True)
+eval_fc = sm.lambdify((data.system.q[:] + data.system.u[:], p), front_contact_coord,
+                      cse=True)
 fc_arr = np.array(eval_fc(x_arr, p_vals))
 x_lim = min((fc_arr[0, :].min(), q1_arr.min())), max((fc_arr[0, :].max(), q1_arr.max()))
 y_lim = min((fc_arr[1, :].min(), q2_arr.min())), max((fc_arr[1, :].max(), q2_arr.max()))
@@ -146,8 +131,9 @@ if not make_animation:
 
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(10, 10))
 plotter = Plotter.from_model(ax, data.model)
-plotter.lambdify_system((data.system.q[:] + data.system.u[:], p))
-plotter.evaluate_system(x_arr[:, 0].flatten(), p_vals)
+plotter.add_vector(**disturbance_plot_info)
+plotter.lambdify_system((data.system.q[:] + data.system.u[:], c, p))
+plotter.evaluate_system(x_arr[:, 0], c_arr[:, 0], p_vals)
 plotter.plot()
 X, Y = np.meshgrid(np.arange(x_lim[0] - 1, x_lim[1] + 1, 0.5),
                    np.arange(y_lim[0] - 1, y_lim[1] + 1, 0.5))
@@ -163,7 +149,8 @@ ax.axis("off")
 
 def animate(fi):
     """Update the plot for frame i."""
-    plotter.evaluate_system(x_eval(fi / (n_frames - 1) * t_arr[-1]), p_vals)
+    time = fi / (n_frames - 1) * t_arr[-1]
+    plotter.evaluate_system(x_eval(time), c_eval(time), p_vals)
     return *plotter.update(),
 
 

@@ -13,7 +13,7 @@ with open("data.pkl", "rb") as f:
     data = cloudpickle.load(f)
 system = data.system
 bicycle = data.model
-steer_torque = data.controllable_loads[0]
+steer_torque, disturbance = data.controllable_loads
 
 bike_params = bp.Bicycle("Browser", pathToData=data_dir)
 constants = bicycle.get_param_values(bike_params)
@@ -25,7 +25,7 @@ constants.update({
 
 initial_conditions = {xi: 0 for xi in system.q[:] + system.u[:]}
 initial_conditions.update({
-    bicycle.q[3]: 0.2,
+    bicycle.q[3]: 0,
     bicycle.q[4]: 0.314,
     bicycle.u[0]: 3,
     bicycle.u[5]: -3 / constants[bicycle.rear_wheel.radius],
@@ -38,7 +38,8 @@ initial_conditions = {xi: np.random.random() * 1E-14 if xval == 0 else xval for 
 roll_rate_idx = len(system.q) + system.u[:].index(bicycle.u[3])
 max_roll_rate = 0.2
 controls = {
-    steer_torque: lambda t, x: 10 * max(-1, min(x[roll_rate_idx] / max_roll_rate, 1))
+    steer_torque: lambda t, x: 10 * max(-1, min(x[roll_rate_idx] / max_roll_rate, 1)),
+    disturbance: lambda t, x: (30 + 30 * t) * np.sin(t * 2 * np.pi),
 }
 
 data.update({

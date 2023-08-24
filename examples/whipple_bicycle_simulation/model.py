@@ -10,7 +10,7 @@ from brim import (
     WhippleBicycle,
 )
 from sympy import symbols
-from sympy.physics.mechanics import dynamicsymbols
+from sympy.physics.mechanics import Force, dynamicsymbols
 from sympy.physics.mechanics._actuator import TorqueActuator
 
 from utilities import DataStorage
@@ -38,6 +38,9 @@ system.apply_gravity(-g * bicycle.ground.get_normal(bicycle.ground.origin))
 steer_torque = dynamicsymbols("steer_torque")
 system.add_actuators(TorqueActuator(steer_torque, bicycle.rear_frame.steer_axis,
                                     bicycle.front_frame.body, bicycle.rear_frame.body))
+disturbance = dynamicsymbols("disturbance")
+system.add_loads(
+    Force(bicycle.rear_frame.saddle, disturbance * bicycle.rear_frame.frame.y))
 
 # The dependent and independent variables need to be specified manually
 system.q_ind = [*bicycle.q[:4], *bicycle.q[5:]]
@@ -52,7 +55,7 @@ system.form_eoms(constraint_solver="CRAMER")  # LU solve may lead to zero divisi
 data = DataStorage(**{
     "model": bicycle,
     "system": system,
-    "controllable_loads": [steer_torque],
+    "controllable_loads": [steer_torque, disturbance],
 })
 
 with open("data.pkl", "wb") as f:
