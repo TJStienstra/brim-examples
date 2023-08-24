@@ -5,6 +5,7 @@ import numpy as np
 import pycollo
 import sympy as sm
 import sympy.physics.mechanics as me
+from scipy.interpolate import CubicSpline
 
 from utilities import DataStorage
 
@@ -12,7 +13,7 @@ with open("data.pkl", "rb") as f:
     data = cloudpickle.load(f)
 
 # Definitions of the parameters of the optimization problem
-data.duration = 1.0
+data.duration = 2.5
 data.max_torque = 10
 data.max_mean_tracking_error = 0.01
 
@@ -24,7 +25,7 @@ data.path_constraints_type = 0
 # 0: Only eoms, enforce nh constraints only for the initial state
 # 1: eoms[:len(u_ind)] + nh constraints, enforces nh constraints for all states
 # 2: all eoms and nh constraints
-data.expected_loads_integrand_value = 24.5
+data.expected_loads_integrand_value = 0.53
 data.aimed_path_integrand_value = data.max_mean_tracking_error ** 2 * data.duration
 
 data.x = data.system.q.col_join(data.system.u)
@@ -133,6 +134,18 @@ problem.settings.max_mesh_iterations = 1
 # Solve
 problem.initialise()
 problem.solve()
+
+t_arr = problem.solution._time_[0]
+x_arr = problem.solution.state[0]
+c_arr = problem.solution.control[0][-len(data.controllable_loads):, :]
+p, p_vals = zip(*data.constants.items())
+path, load = sm.lambdify((t, data.x, data.controllable_loads, p),
+                         (data.path_objective, data.load_objective)
+                         )(t_arr, x_arr, c_arr, p_vals)
+tracking_term = CubicSpline(t_arr, path).integrate(0, t_arr[-1])
+control_term = CubicSpline(t_arr, load).integrate(0, t_arr[-1])
+print(f"Tracking term: {tracking_term}")  # noqa: T201
+print(f"Control term: {control_term}")  # noqa: T201
 
 data.solution = DataStorage(**{
     "path_weight": path_weight,
