@@ -163,7 +163,7 @@ ax.axis("off")
 
 def animate(fi):
     """Update the plot for frame i."""
-    plotter.evaluate_system(x_eval(fi / n_frames * t_arr[-1]), p_vals)
+    plotter.evaluate_system(x_eval(fi / (n_frames - 1) * t_arr[-1]), p_vals)
     return *plotter.update(),
 
 
