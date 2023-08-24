@@ -90,19 +90,16 @@ plt.xlabel("q1 (m)")
 plt.ylabel("Torque (Nm)")
 plt.legend()
 
-plt.figure()
+fig, axs = plt.subplots(2, 1, sharex=True)
 for i in range(len(constraints)):
-    plt.plot(q1_arr, constr_arr[i, :], label=f"{i}")
-plt.xlabel("q1 (m)")
-plt.ylabel("Constraint violation")
-plt.legend()
-
-plt.figure()
+    axs[0].plot(q1_arr, constr_arr[i, :], label=f"{i}")
+axs[0].set_ylabel("Constraint violation")
+axs[0].legend()
 for i in range(len(data.eoms)):
-    plt.plot(q1_arr, eoms_arr[i, :], label=f"{i}")
-plt.xlabel("q1 (m)")
-plt.ylabel("EoM violation")
-plt.legend()
+    axs[1].plot(q1_arr, eoms_arr[i, :], label=f"{i}")
+axs[1].set_xlabel("q1 (m)")
+axs[1].set_ylabel("EoM violation")
+axs[1].legend()
 
 p, p_vals = zip(*data.constants.items())
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(10, 10))
