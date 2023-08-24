@@ -8,6 +8,8 @@ from brim.other import RollingDisc
 
 from utilities import DataStorage
 
+steer_torque_only = False
+
 g = sm.symbols("g")
 t = me.dynamicsymbols._t
 T_drive, T_steer, T_roll = me.dynamicsymbols("T_drive, T_steer, T_roll")
@@ -32,7 +34,9 @@ system.u_ind = disc.u[2:]
 system.u_dep = disc.u[:2]
 system.form_eoms()
 
-controllable_loads = [T_steer, T_roll, T_drive]
+controllable_loads = [T_steer]
+if not steer_torque_only:
+    controllable_loads += [T_roll, T_drive]
 constants = {
     disc.disc.body.mass: 1.0,
     disc.disc.radius: 0.3,
@@ -41,7 +45,8 @@ constants = {
 mr2 = float((disc.disc.body.mass * disc.disc.radius ** 2).subs(constants))
 constants[disc.disc.body.central_inertia.to_matrix(disc.disc.frame)[0, 0]] = mr2 / 4
 constants[disc.disc.body.central_inertia.to_matrix(disc.disc.frame)[1, 1]] = mr2 / 2
-
+if steer_torque_only:
+    constants.update({T_roll: 0, T_drive: 0})
 
 data = DataStorage(**{
     "model": disc,
