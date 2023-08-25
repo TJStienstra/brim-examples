@@ -23,6 +23,7 @@ from brim import (
 from brim.brim import SideLeanSeatSpringDamper
 from brim.rider import PinElbowSpringDamper, SphericalShoulderSpringDamper
 from sympy import symbols
+from sympy.physics.mechanics import Force, dynamicsymbols
 
 from utilities import DataStorage
 
@@ -76,6 +77,9 @@ system = br.to_system()
 
 g = symbols("g")
 system.apply_gravity(-g * bicycle.ground.get_normal(bicycle.ground.origin))
+disturbance = dynamicsymbols("disturbance")
+system.add_loads(
+    Force(bicycle.rear_frame.saddle, disturbance * bicycle.rear_frame.frame.y))
 
 # The dependent and independent variables need to be specified manually
 system.q_ind = [
@@ -101,6 +105,7 @@ system.form_eoms(constraint_solver="CRAMER")
 data = DataStorage(**{
     "model": br,
     "system": system,
+    "disturbance": disturbance,
 })
 
 with open("data.pkl", "wb") as f:

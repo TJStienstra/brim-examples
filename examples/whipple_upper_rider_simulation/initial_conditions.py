@@ -63,7 +63,7 @@ zero_conditions = {
     bicycle.q[0]: 0,
     bicycle.q[1]: 0,
     bicycle.q[2]: 0,
-    bicycle.q[3]: 0.2,
+    bicycle.q[3]: 0,
     bicycle.q[4]: 0.314,
     bicycle.q[5]: 0,
     bicycle.q[6]: 0,
@@ -192,17 +192,18 @@ u0 = np.concatenate((u0_ind, u0_dep))
 initial_conditions.update(dict(zip(system.q, q0)))
 initial_conditions.update(dict(zip(system.u, u0)))
 
+roll_idx = system.q[:].index(bicycle.q[3])
 roll_rate_idx = len(system.q) + system.u[:].index(bicycle.u[3])
 left_shoulder_idx = system.q[:].index(rider.left_shoulder.q[0])
 right_shoulder_idx = system.q[:].index(rider.right_shoulder.q[0])
 left_elbow_idx = system.q[:].index(rider.left_arm.q[0])
 right_elbow_idx = system.q[:].index(rider.right_arm.q[0])
 max_roll_rate = 0.2
-excitation = lambda t, x: min(x[roll_rate_idx] / max_roll_rate, 1.0)  # noqa: E731
+excitation = (lambda t, x:  # noqa: E731
+              max(-1, min(x[roll_rate_idx] / max_roll_rate, 1)))
 
 controls = {
-    lean_torque.symbols["q_ref"]:
-        lambda t, x: -excitation(t, x),
+    lean_torque.symbols["q_ref"]: lambda t, x: -x[roll_idx],
     left_shoulder_torque.symbols["q_ref_flexion"]:
         lambda t, x: initial_conditions[rider.left_shoulder.q[0]] + excitation(t, x),
     left_shoulder_torque.symbols["q_ref_adduction"]:
@@ -219,9 +220,11 @@ controls = {
         lambda t, x: initial_conditions[rider.left_arm.q[0]] - excitation(t, x),
     right_arm_torque.symbols["q_ref"]:
         lambda t, x: initial_conditions[rider.right_arm.q[0]] + excitation(t, x),
+    data.disturbance: lambda t, x: (100 + 100 * t) * np.sin(t * 2 * np.pi),
 }
 for control in controls:
-    constants.pop(control)
+    if control in constants:
+        constants.pop(control)
 assert set(constants.keys()).isdisjoint(controls.keys())
 
 data.update({
