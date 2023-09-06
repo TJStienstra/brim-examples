@@ -75,15 +75,21 @@ plt.xlabel("Time (s)")
 plt.ylabel("Forward velocity (m/s)")
 
 plt.figure()
+q_comp_arr = x_arr[data.system.q[:].index(data.model.front_frame.q[0]), :]
+plt.plot(t_arr, 1E3 * q_comp_arr)
+plt.xlabel("Time (s)")
+plt.ylabel("Compression (mm)")
+
+plt.figure()
 for i in range(len(constraints)):
     plt.plot(t_arr, constr_arr[i, :], label=f"{i}")
 plt.xlabel("Time (s)")
 plt.ylabel("Constraint violation")
 plt.legend()
 
-disturbance_plot_info = {"vector": c[1] / c_arr[1, :].max() * data.model.rear_frame.y,
-                         "origin": data.model.rear_frame.saddle,
-                         "name": "disturbance", "color": "r"}
+disturbance_plot_info = {
+    "vector": c[1] / c_arr[1, :].max() * data.model.rear_frame.wheel_hub.axis,
+    "origin": data.model.rear_frame.saddle.point, "name": "disturbance", "color": "r"}
 p, p_vals = zip(*data.constants.items())
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(10, 10))
 n_frames = 6
