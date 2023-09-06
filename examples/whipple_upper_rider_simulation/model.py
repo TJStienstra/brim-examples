@@ -2,10 +2,11 @@
 import cloudpickle
 from brim import (
     BicycleRider,
-    FixedPelvisToTorso,
+    FixedSacrum,
     FlatGround,
-    HolonomicHandGrip,
+    HolonomicHandGrips,
     KnifeEdgeWheel,
+    MasslessCranks,
     NonHolonomicTyre,
     PinElbowStickLeftArm,
     PinElbowStickRightArm,
@@ -15,7 +16,6 @@ from brim import (
     RigidFrontFrame,
     RigidRearFrame,
     SideLeanSeat,
-    SimplePedals,
     SphericalLeftShoulder,
     SphericalRightShoulder,
     WhippleBicycle,
@@ -35,7 +35,7 @@ bicycle.front_wheel = KnifeEdgeWheel("front_wheel")
 bicycle.rear_wheel = KnifeEdgeWheel("rear_wheel")
 bicycle.front_tyre = NonHolonomicTyre("front_tyre")
 bicycle.rear_tyre = NonHolonomicTyre("rear_tyre")
-bicycle.pedals = SimplePedals("pedals")
+bicycle.cranks = MasslessCranks("cranks")
 bicycle.ground = FlatGround("ground")
 
 rider = Rider("rider")
@@ -43,15 +43,15 @@ rider.pelvis = PlanarPelvis("pelvis")
 rider.torso = PlanarTorso("torso")
 rider.left_arm = PinElbowStickLeftArm("left_arm")
 rider.right_arm = PinElbowStickRightArm("right_arm")
-rider.pelvis_to_torso = FixedPelvisToTorso("pelvis_to_torso")
+rider.sacrum = FixedSacrum("sacrum")
 rider.left_shoulder = SphericalLeftShoulder("left_shoulder")
 rider.right_shoulder = SphericalRightShoulder("right_shoulder")
 
 br = BicycleRider("bicycle_rider")
 br.bicycle = bicycle
 br.rider = rider
-br.seat_connection = SideLeanSeat("seat_conn")
-br.steer_connection = HolonomicHandGrip("steer_conn")
+br.seat = SideLeanSeat("seat")
+br.hand_grips = HolonomicHandGrips("hand_grips")
 
 left_shoulder_torque = SphericalShoulderSpringDamper("left_shoulder")
 right_shoulder_torque = SphericalShoulderSpringDamper("right_shoulder")
@@ -62,12 +62,12 @@ rider.left_shoulder.add_load_groups(left_shoulder_torque)
 rider.right_shoulder.add_load_groups(right_shoulder_torque)
 rider.left_arm.add_load_groups(left_arm_torque)
 rider.right_arm.add_load_groups(right_arm_torque)
-br.seat_connection.add_load_groups(lean_torque)
+br.seat.add_load_groups(lean_torque)
 
 # Define the model
 br.define_connections()
 br.define_objects()
-bicycle.pedals.symbols["offset"] = rider.pelvis.symbols["hip_width"] / 2
+bicycle.cranks.symbols["offset"] = rider.pelvis.symbols["hip_width"] / 2
 br.define_kinematics()
 br.define_loads()
 br.define_constraints()
@@ -78,20 +78,20 @@ system = br.to_system()
 g = symbols("g")
 system.apply_gravity(-g * bicycle.ground.get_normal(bicycle.ground.origin))
 disturbance = dynamicsymbols("disturbance")
-system.add_loads(
-    Force(bicycle.rear_frame.saddle, disturbance * bicycle.rear_frame.frame.y))
+system.add_loads(Force(
+    bicycle.rear_frame.saddle.point, disturbance * bicycle.rear_frame.wheel_hub.axis))
 
 # The dependent and independent variables need to be specified manually
 system.q_ind = [
     *bicycle.q[:4], *bicycle.q[5:], rider.left_shoulder.q[1], rider.right_shoulder.q[1],
-    *br.seat_connection.q]
+    *br.seat.q]
 system.q_dep = [
     bicycle.q[4], rider.left_shoulder.q[0], rider.left_shoulder.q[2],
     rider.right_shoulder.q[0], rider.right_shoulder.q[2],
     *rider.left_arm.q, *rider.right_arm.q]
 system.u_ind = [
     bicycle.u[3], *bicycle.u[5:7],
-    rider.left_shoulder.u[1], rider.right_shoulder.u[1], *br.seat_connection.u]
+    rider.left_shoulder.u[1], rider.right_shoulder.u[1], *br.seat.u]
 system.u_dep = [
     *bicycle.u[:3], bicycle.u[4], bicycle.u[7],
     rider.left_shoulder.u[0], rider.left_shoulder.u[2],

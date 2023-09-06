@@ -22,7 +22,7 @@ left_shoulder_torque = rider.left_shoulder.load_groups[0]
 right_shoulder_torque = rider.right_shoulder.load_groups[0]
 left_arm_torque = rider.left_arm.load_groups[0]
 right_arm_torque = rider.right_arm.load_groups[0]
-lean_torque = br.seat_connection.load_groups[0]
+lean_torque = br.seat.load_groups[0]
 
 bike_params = bp.Bicycle("Browser", pathToData=data_dir)
 bike_params.add_rider("Jason", reCalc=True)
@@ -35,8 +35,8 @@ k_elbow, c_elbow = 20, 2
 # D. S. de Lorenzo and Mont Hubbard. Dynamic bicycle stability of a flexibly coupled
 # rider. Internal report UC Davis, 1996.
 constants.update({
-    br.seat_connection.symbols["alpha"]: -0.7, symbols("g"): 9.81,
-    bicycle.pedals.symbols["radius"]: 0.15,
+    br.seat.symbols["alpha"]: -0.7, symbols("g"): 9.81,
+    bicycle.cranks.symbols["radius"]: 0.15,
     bicycle.symbols["gear_ratio"]: 2.0,
     lean_torque.symbols["k"]: 128,
     lean_torque.symbols["c"]: 50,
@@ -70,7 +70,7 @@ zero_conditions = {
     bicycle.q[7]: 0,
     rider.left_arm.q[0]: 0.5,
     rider.right_arm.q[0]: 0.5,
-    br.seat_connection.q[0]: 0,
+    br.seat.q[0]: 0,
     rider.left_shoulder.q[0]: 0.6,
     rider.left_shoulder.q[1]: -0.2,
     rider.left_shoulder.q[2]: -0.3,
@@ -106,15 +106,15 @@ constants.update({
 leg = TwoPinStickLeftLeg("left_leg")
 q_hip = dynamicsymbols("q_hip")
 leg.define_all()
-leg.hip_interframe.orient_axis(bicycle.rear_frame.frame, q_hip,
-                               bicycle.rear_frame.frame.y)
-saddle_point = br.seat_connection.system.joints[0].parent_point
-offset = Vector({bicycle.rear_frame.frame: rider.pelvis.left_hip_point.pos_from(
+leg.hip_interframe.orient_axis(bicycle.rear_frame.saddle.frame, q_hip,
+                               bicycle.rear_frame.wheel_hub.axis)
+saddle_point = br.seat.system.joints[0].parent_point
+offset = Vector({bicycle.rear_frame.saddle.frame: rider.pelvis.left_hip_point.pos_from(
     saddle_point).to_matrix(rider.pelvis.frame)})
 leg.hip_interpoint.set_pos(saddle_point, 0)
 val_dict = {leg.q[1]: 0, **leg.get_param_values(bike_params), **constants}
-v = leg.foot_interpoint.pos_from(bicycle.pedals.center_point).to_matrix(
-    bicycle.rear_frame.frame).xreplace(val_dict).simplify()
+v = leg.foot_interpoint.pos_from(bicycle.cranks.center_point).to_matrix(
+    bicycle.rear_frame.wheel_hub.frame).xreplace(val_dict).simplify()
 val_dict[q_hip], val_dict[leg.q[0]] = fsolve(
     lambdify([(q_hip, leg.q[0])], [v[0], v[2]]), (0.6, 1.5))
 additional_inertia = Dyadic(0)
@@ -122,13 +122,15 @@ additional_mass = S.Zero
 for body in leg.system.bodies:
     additional_inertia += 2 * body.parallel_axis(bicycle.rear_frame.body.masscenter)
     additional_inertia += 2 * body.mass * (inertia(
-        bicycle.rear_frame.frame, 1, 1, 1) * offset.dot(offset) - offset.outer(offset))
+        bicycle.rear_frame.body.frame, 1, 1, 1
+    ) * offset.dot(offset) - offset.outer(offset))
     additional_mass += 2 * body.mass
 extra_i_vals = lambdify(val_dict.keys(),
-                        additional_inertia.to_matrix(bicycle.rear_frame.frame),
+                        additional_inertia.to_matrix(bicycle.rear_frame.body.frame),
                         cse=True)(*val_dict.values())
 # Note: ixy and iyz are in this array not zero as I used the asymetric leg two times
-i_rear = bicycle.rear_frame.body.central_inertia.to_matrix(bicycle.rear_frame.frame)
+i_rear = bicycle.rear_frame.body.central_inertia.to_matrix(
+    bicycle.rear_frame.body.frame)
 constants[bicycle.rear_frame.body.mass] += additional_mass.xreplace(val_dict)
 for idx in [(0, 0), (1, 1), (2, 2), (2, 0)]:
     constants[i_rear[idx]] += extra_i_vals[idx]
@@ -146,7 +148,7 @@ initial_conditions = {
     bicycle.u[7]: 0,
     rider.left_arm.u[0]: 0,
     rider.right_arm.u[0]: 0,
-    br.seat_connection.u[0]: 0,
+    br.seat.u[0]: 0,
     rider.left_shoulder.u[0]: 0,
     rider.left_shoulder.u[1]: 0,
     rider.left_shoulder.u[2]: 0,
