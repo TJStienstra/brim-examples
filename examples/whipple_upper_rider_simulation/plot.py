@@ -48,7 +48,7 @@ for side in ("left", "right"):
             -lg.symbols["k"] * (j.coordinates[0] - lg.symbols["q_ref"]) -
             lg.symbols["c"] * j.speeds[0])
     eq_angles[f"{side}_elbow"] = lg.symbols["q_ref"]
-lg = data.model.seat_connection.load_groups[0]
+lg = data.model.seat.load_groups[0]
 j = lg.system.joints[0]
 loads["lean"] = (
         -lg.symbols["k"] * (j.coordinates[0] - lg.symbols["q_ref"]) -
@@ -107,7 +107,7 @@ qs = {
     "yaw": data.model.bicycle.q[2],
     "roll": data.model.bicycle.q[3],
     "steer": data.model.bicycle.q[6],
-    "lean": data.model.seat_connection.q[0],
+    "lean": data.model.seat.q[0],
     "shoulder flex left": data.model.rider.left_shoulder.q[0],
     "shoulder flex right": data.model.rider.right_shoulder.q[0],
     "elbow flex left": data.model.rider.left_arm.q[0],
@@ -124,7 +124,7 @@ us = {
     "yaw": data.model.bicycle.u[2],
     "roll": data.model.bicycle.u[3],
     "steer": data.model.bicycle.u[6],
-    "lean": data.model.seat_connection.u[0],
+    "lean": data.model.seat.u[0],
     "shoulder flex left": data.model.rider.left_shoulder.u[0],
     "shoulder flex right": data.model.rider.right_shoulder.u[0],
     "elbow flex left": data.model.rider.left_arm.u[0],
@@ -161,8 +161,8 @@ fig.tight_layout()
 
 plt.figure()
 qs = {
-    "lean": (data.model.seat_connection.q[0],
-             data.model.seat_connection.load_groups[0].symbols["q_ref"]),
+    "lean": (data.model.seat.q[0],
+             data.model.seat.load_groups[0].symbols["q_ref"]),
     "shoulder flex left": (
         data.model.rider.left_shoulder.q[0],
         data.model.rider.left_shoulder.load_groups[0].symbols["q_ref_flexion"]),
@@ -203,8 +203,10 @@ plt.legend()
 
 dist_idx = c.index(data.disturbance)
 disturbance_plot_info = {
-    "vector": c[dist_idx] / c_arr[dist_idx, :].max() * data.model.bicycle.rear_frame.y,
-    "origin": data.model.bicycle.rear_frame.saddle, "name": "disturbance", "color": "r"}
+    "vector": c[dist_idx] / c_arr[dist_idx, :].max() *
+              data.model.bicycle.rear_frame.wheel_hub.axis,
+    "origin": data.model.bicycle.rear_frame.saddle.point,
+    "name": "disturbance", "color": "r"}
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(10, 10))
 n_frames = 6
 plotter = Plotter.from_model(ax, data.model)

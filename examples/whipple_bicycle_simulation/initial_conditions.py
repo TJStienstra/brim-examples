@@ -14,18 +14,31 @@ with open("data.pkl", "rb") as f:
 system = data.system
 bicycle = data.model
 steer_torque, disturbance = data.controllable_loads
+bike_parametrization = data.bike_parametrization
 
-bike_params = bp.Bicycle("Browser", pathToData=data_dir)
+bike_params = bp.Bicycle(bike_parametrization, pathToData=data_dir)
 constants = bicycle.get_param_values(bike_params)
 constants.update({
     symbols("g"): 9.81,
-    bicycle.symbols["gear_ratio"]: np.random.random() * 1E-10,
-    **{sym: np.random.random() * 1E-10 for sym in bicycle.pedals.symbols.values()},
 })
+if bike_parametrization == "Fisher":
+    # Rough estimation of missing parameters, most are only used for visualization.
+    constants[bicycle.rear_frame.symbols["d4"]] = 0.41
+    constants[bicycle.rear_frame.symbols["d5"]] = -0.57
+    constants[bicycle.rear_frame.symbols["l_bbx"]] = 0.4
+    constants[bicycle.rear_frame.symbols["l_bbz"]] = 0.18
+    constants[bicycle.front_frame.symbols["d6"]] = 0.1
+    constants[bicycle.front_frame.symbols["d7"]] = 0.3
+    constants[bicycle.front_frame.symbols["d8"]] = -0.3
+if "k" in bicycle.front_frame.symbols:
+    constants[bicycle.front_frame.symbols["d9"]] = \
+        constants[bicycle.front_frame.symbols["d3"]] / 2
+    constants[bicycle.front_frame.symbols["k"]] = 19.4E3
+    constants[bicycle.front_frame.symbols["c"]] = 9E3
 
 initial_conditions = {xi: 0 for xi in system.q[:] + system.u[:]}
 initial_conditions.update({
-    bicycle.q[3]: 0,
+    bicycle.q[3]: 1E-5,
     bicycle.q[4]: 0.314,
     bicycle.u[0]: 3,
     bicycle.u[5]: -3 / constants[bicycle.rear_wheel.radius],

@@ -28,6 +28,7 @@ else:
 print("Simulate")  # noqa: T201
 time_arr = np.arange(0, 2.5, 0.01)
 try:
+    # import non_existent_package
     simulator.solve(time_arr, solver="dae", rtol=1e-3, atol=1e-6)
     print("Simulated with DAE solver")  # noqa: T201
 except ImportError:
