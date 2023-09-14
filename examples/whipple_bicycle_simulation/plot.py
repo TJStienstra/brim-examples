@@ -74,11 +74,12 @@ plt.plot(t_arr, np.sqrt(u1_arr ** 2 + u2_arr ** 2))
 plt.xlabel("Time (s)")
 plt.ylabel("Forward velocity (m/s)")
 
-plt.figure()
-q_comp_arr = x_arr[data.system.q[:].index(data.model.front_frame.q[0]), :]
-plt.plot(t_arr, 1E3 * q_comp_arr)
-plt.xlabel("Time (s)")
-plt.ylabel("Compression (mm)")
+if data.model.front_frame.q:
+    plt.figure()
+    q_comp_arr = x_arr[data.system.q[:].index(data.model.front_frame.q[0]), :]
+    plt.plot(t_arr, 1E3 * q_comp_arr)
+    plt.xlabel("Time (s)")
+    plt.ylabel("Compression (mm)")
 
 plt.figure()
 for i in range(len(constraints)):
