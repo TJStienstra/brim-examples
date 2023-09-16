@@ -7,7 +7,7 @@ from brim import (
     HolonomicHandGrips,
     KnifeEdgeWheel,
     MasslessCranks,
-    NonHolonomicTyre,
+    NonHolonomicTire,
     PinElbowStickLeftArm,
     PinElbowStickRightArm,
     PlanarPelvis,
@@ -33,8 +33,8 @@ bicycle.front_frame = RigidFrontFrame("front_frame")
 bicycle.rear_frame = RigidRearFrame("rear_frame")
 bicycle.front_wheel = KnifeEdgeWheel("front_wheel")
 bicycle.rear_wheel = KnifeEdgeWheel("rear_wheel")
-bicycle.front_tyre = NonHolonomicTyre("front_tyre")
-bicycle.rear_tyre = NonHolonomicTyre("rear_tyre")
+bicycle.front_tire = NonHolonomicTire("front_tire")
+bicycle.rear_tire = NonHolonomicTire("rear_tire")
 bicycle.cranks = MasslessCranks("cranks")
 bicycle.ground = FlatGround("ground")
 

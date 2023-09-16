@@ -3,7 +3,7 @@
 import cloudpickle
 import sympy as sm
 import sympy.physics.mechanics as me
-from brim import FlatGround, KnifeEdgeWheel, NonHolonomicTyre
+from brim import FlatGround, KnifeEdgeWheel, NonHolonomicTire
 from brim.other import RollingDisc
 
 from utilities import DataStorage
@@ -17,7 +17,7 @@ T_drive, T_steer, T_roll = me.dynamicsymbols("T_drive, T_steer, T_roll")
 disc = RollingDisc("disc")
 disc.disc = KnifeEdgeWheel("wheel")
 disc.ground = FlatGround("ground")
-disc.tyre = NonHolonomicTyre("tyre")
+disc.tire = NonHolonomicTire("tire")
 disc.define_all()
 
 system = disc.to_system()
@@ -28,7 +28,7 @@ system.add_loads(
     me.Torque(
         disc.disc.frame,
         T_drive * disc.disc.rotation_axis +
-        T_steer * disc.tyre.upward_radial_axis +
+        T_steer * disc.tire.upward_radial_axis +
         T_roll * r_long))
 system.u_ind = disc.u[2:]
 system.u_dep = disc.u[:2]

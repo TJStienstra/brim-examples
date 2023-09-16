@@ -33,6 +33,8 @@ if bike_parametrization == "Fisher":
 if "k" in bicycle.front_frame.symbols:
     constants[bicycle.front_frame.symbols["d9"]] = \
         constants[bicycle.front_frame.symbols["d3"]] / 2
+    # Suspension spring and damper constants are the softest settings provided in:
+    # http://dx.doi.org/10.13140/RG.2.2.26063.64162
     constants[bicycle.front_frame.symbols["k"]] = 19.4E3
     constants[bicycle.front_frame.symbols["c"]] = 9E3
 
@@ -43,6 +45,8 @@ initial_conditions.update({
     bicycle.u[0]: 3,
     bicycle.u[5]: -3 / constants[bicycle.rear_wheel.radius],
 })
+if bicycle.front_frame.q:
+    bicycle.front_frame.q[0] = 0.002
 
 # Introduce small numerical error on zero values to avoid possible numerical problems
 initial_conditions = {xi: np.random.random() * 1E-14 if xval == 0 else xval for xi, xval

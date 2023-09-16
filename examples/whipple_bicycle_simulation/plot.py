@@ -114,7 +114,7 @@ for artist in plotter.artists:
     ax.add_artist(copy(artist))
 q1_arr = x_arr[data.system.q[:].index(data.model.q[0]), :]
 q2_arr = x_arr[data.system.q[:].index(data.model.q[1]), :]
-front_contact_coord = data.model.front_tyre.contact_point.pos_from(
+front_contact_coord = data.model.front_tire.contact_point.pos_from(
     plotter.origin).to_matrix(plotter.inertial_frame)[:2]
 eval_fc = sm.lambdify((data.system.q[:] + data.system.u[:], p), front_contact_coord,
                       cse=True)
