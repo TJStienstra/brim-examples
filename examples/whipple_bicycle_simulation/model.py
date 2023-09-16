@@ -3,15 +3,14 @@ import cloudpickle
 from brim import (
     FlatGround,
     KnifeEdgeWheel,
-    NonHolonomicTyre,
+    NonHolonomicTire,
     RigidFrontFrame,
     RigidRearFrame,
     WhippleBicycle,
 )
 from brim.bicycle import SuspensionRigidFrontFrame
 from sympy import symbols
-from sympy.physics.mechanics import Force, dynamicsymbols
-from sympy.physics.mechanics._actuator import TorqueActuator
+from sympy.physics.mechanics import Force, TorqueActuator, dynamicsymbols
 
 from utilities import DataStorage
 
@@ -20,7 +19,7 @@ from utilities import DataStorage
 #            default Whipple bicycle model.
 # "Fisher": Gary Fisher Mountain Bike, a hard-tail mountain bicycle modeled with
 #           suspension in the front frame.
-bike_parametrization = "Fisher"
+bike_parametrization = "Browser"
 
 # Configure the bicycle rider model
 bicycle = WhippleBicycle("bicycle")
@@ -31,8 +30,8 @@ else:
 bicycle.rear_frame = RigidRearFrame("rear_frame")
 bicycle.front_wheel = KnifeEdgeWheel("front_wheel")
 bicycle.rear_wheel = KnifeEdgeWheel("rear_wheel")
-bicycle.front_tyre = NonHolonomicTyre("front_tyre")
-bicycle.rear_tyre = NonHolonomicTyre("rear_tyre")
+bicycle.front_tire = NonHolonomicTire("front_tire")
+bicycle.rear_tire = NonHolonomicTire("rear_tire")
 bicycle.ground = FlatGround("ground")
 
 # Define the model

@@ -107,7 +107,7 @@ ax.plot(q1_path, q2_path, np.zeros_like(q1_path), "k", label="Target")
 ax.plot(q1_arr, q2_arr, np.zeros_like(q1_arr), "r", label="Solution")
 n_frames = 10
 plotter = Plotter.from_model(ax, data.model)
-plotter.add_point(data.model.tyre.contact_point, color="r")
+plotter.add_point(data.model.tire.contact_point, color="r")
 plotter.lambdify_system((data.system.q[:] + data.system.u[:], p))
 for i in range(n_frames):
     for artist in plotter.artists:
@@ -135,7 +135,7 @@ if not make_animation:
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"}, figsize=(10, 10))
 ax.plot(q1_path, q2_path, np.zeros_like(q1_path), "k", label="Target")
 plotter = Plotter.from_model(ax, data.model)
-cp = plotter.add_point(data.model.tyre.contact_point, color="r")
+cp = plotter.add_point(data.model.tire.contact_point, color="r")
 cp.visible = False
 sol_line, = ax.plot([], [], [], "r", label="Solution")
 plotter.lambdify_system((data.system.q[:] + data.system.u[:], p))

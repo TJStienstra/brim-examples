@@ -74,11 +74,12 @@ plt.plot(t_arr, np.sqrt(u1_arr ** 2 + u2_arr ** 2))
 plt.xlabel("Time (s)")
 plt.ylabel("Forward velocity (m/s)")
 
-plt.figure()
-q_comp_arr = x_arr[data.system.q[:].index(data.model.front_frame.q[0]), :]
-plt.plot(t_arr, 1E3 * q_comp_arr)
-plt.xlabel("Time (s)")
-plt.ylabel("Compression (mm)")
+if data.model.front_frame.q:
+    plt.figure()
+    q_comp_arr = x_arr[data.system.q[:].index(data.model.front_frame.q[0]), :]
+    plt.plot(t_arr, 1E3 * q_comp_arr)
+    plt.xlabel("Time (s)")
+    plt.ylabel("Compression (mm)")
 
 plt.figure()
 for i in range(len(constraints)):
@@ -113,7 +114,7 @@ for artist in plotter.artists:
     ax.add_artist(copy(artist))
 q1_arr = x_arr[data.system.q[:].index(data.model.q[0]), :]
 q2_arr = x_arr[data.system.q[:].index(data.model.q[1]), :]
-front_contact_coord = data.model.front_tyre.contact_point.pos_from(
+front_contact_coord = data.model.front_tire.contact_point.pos_from(
     plotter.origin).to_matrix(plotter.inertial_frame)[:2]
 eval_fc = sm.lambdify((data.system.q[:] + data.system.u[:], p), front_contact_coord,
                       cse=True)

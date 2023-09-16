@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from brim import FlatGround, KnifeEdgeWheel, NonHolonomicTyre
+from brim import FlatGround, KnifeEdgeWheel, NonHolonomicTire
 from brim.other import RollingDisc
 from numpy.testing import assert_allclose
 from sympy import symbols
@@ -15,7 +15,7 @@ class TestSimulator:
         self.rolling_disc = RollingDisc("disc")
         self.rolling_disc.disc = KnifeEdgeWheel("wheel")
         self.rolling_disc.ground = FlatGround("ground")
-        self.rolling_disc.tyre = NonHolonomicTyre("tyre")
+        self.rolling_disc.tire = NonHolonomicTire("tire")
         self.rolling_disc.define_connections()
         self.rolling_disc.define_objects()
         self.rolling_disc.disc.body.central_inertia = inertia(

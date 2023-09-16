@@ -24,7 +24,17 @@ left_arm_torque = rider.left_arm.load_groups[0]
 right_arm_torque = rider.right_arm.load_groups[0]
 lean_torque = br.seat.load_groups[0]
 
-bike_params = bp.Bicycle("Browser", pathToData=data_dir)
+bike_parametrization = "Browser"
+bike_params = bp.Bicycle(bike_parametrization, pathToData=data_dir)
+if bike_parametrization == "Fisher":
+    bike_params.parameters["Measured"]["hbb"] = 0.3
+    bike_params.parameters["Measured"]["lcs"] = 0.44
+    bike_params.parameters["Measured"]["lsp"] = 0.22
+    bike_params.parameters["Measured"]["lst"] = 0.53
+    bike_params.parameters["Measured"]["lamst"] = 1.29
+    bike_params.parameters["Measured"]["whb"] = 0.6
+    bike_params.parameters["Measured"]["LhbR"] = 1.11
+    bike_params.parameters["Measured"]["LhbF"] = 0.65
 bike_params.add_rider("Jason", reCalc=True)
 constants = br.get_param_values(bike_params)
 k_shoulder_flexion, c_shoulder_flexion = 40, 3
@@ -35,7 +45,10 @@ k_elbow, c_elbow = 20, 2
 # D. S. de Lorenzo and Mont Hubbard. Dynamic bicycle stability of a flexibly coupled
 # rider. Internal report UC Davis, 1996.
 constants.update({
-    br.seat.symbols["alpha"]: -0.7, symbols("g"): 9.81,
+    br.seat.symbols["alpha"]: -(
+            bike_params.parameters["Benchmark"]["lam"] +
+            bike_params.human.CFG["somersault"]).nominal_value - 0.1,
+    symbols("g"): 9.81,
     bicycle.cranks.symbols["radius"]: 0.15,
     bicycle.symbols["gear_ratio"]: 2.0,
     lean_torque.symbols["k"]: 128,
@@ -176,9 +189,9 @@ q0 = np.concatenate((q0_ind, q0_dep))
 u_bike_ind = [ui for ui in system.u_ind if ui in bicycle.u]
 u_bike_dep = [ui for ui in system.u_dep if ui in bicycle.u]
 
-fnh_ground = bicycle.rear_tyre.system.nonholonomic_constraints.col_join(
-    bicycle.front_tyre.system.nonholonomic_constraints).col_join(
-    bicycle.front_tyre.system.holonomic_constraints.diff(dynamicsymbols._t)).xreplace(
+fnh_ground = bicycle.rear_tire.system.nonholonomic_constraints.col_join(
+    bicycle.front_tire.system.nonholonomic_constraints).col_join(
+    bicycle.front_tire.system.holonomic_constraints.diff(dynamicsymbols._t)).xreplace(
     solve(system.kdes, system.q.diff(dynamicsymbols._t)))[:]
 
 eval_fnh_ground = lambdify((u_bike_dep, system.q, u_bike_ind, p), fnh_ground, cse=True)
