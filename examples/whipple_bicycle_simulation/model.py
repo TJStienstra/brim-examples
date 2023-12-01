@@ -42,7 +42,7 @@ system = bicycle.to_system()
 
 # Apply additional forces and torques to the system
 g = symbols("g")
-system.apply_gravity(-g * bicycle.ground.get_normal(bicycle.ground.origin))
+system.apply_uniform_gravity(-g * bicycle.ground.get_normal(bicycle.ground.origin))
 steer_torque = dynamicsymbols("steer_torque")
 system.add_actuators(TorqueActuator(
     steer_torque, bicycle.rear_frame.steer_hub.axis,

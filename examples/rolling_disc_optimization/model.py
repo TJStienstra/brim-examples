@@ -22,7 +22,7 @@ disc.define_all()
 
 system = disc.to_system()
 normal = disc.ground.get_normal(disc.ground.origin)
-system.apply_gravity(-g * normal)
+system.apply_uniform_gravity(-g * normal)
 r_long = me.cross(normal, disc.disc.rotation_axis).normalize()
 system.add_loads(
     me.Torque(
