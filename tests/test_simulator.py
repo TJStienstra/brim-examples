@@ -25,8 +25,9 @@ class TestSimulator:
         self.rolling_disc.define_loads()
         self.rolling_disc.define_constraints()
         self.system = self.rolling_disc.to_system()
-        self.system.apply_gravity(-symbols("g") * self.rolling_disc.ground.get_normal(
-            self.rolling_disc.ground.origin))
+        self.system.apply_uniform_gravity(
+            -symbols("g") * self.rolling_disc.ground.get_normal(
+                self.rolling_disc.ground.origin))
         self.system.add_loads(
             Torque(self.rolling_disc.disc.frame,
                    dynamicsymbols("T") * self.rolling_disc.disc.rotation_axis))

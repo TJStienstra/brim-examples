@@ -76,7 +76,7 @@ br.define_constraints()
 system = br.to_system()
 
 g = symbols("g")
-system.apply_gravity(-g * bicycle.ground.get_normal(bicycle.ground.origin))
+system.apply_uniform_gravity(-g * bicycle.ground.get_normal(bicycle.ground.origin))
 disturbance = dynamicsymbols("disturbance")
 system.add_loads(Force(
     bicycle.rear_frame.saddle.point, disturbance * bicycle.rear_frame.wheel_hub.axis))
